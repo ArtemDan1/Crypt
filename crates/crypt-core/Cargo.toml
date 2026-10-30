@@ -1,0 +1,45 @@
+[package]
+name = "crypt-core"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.94"
+
+[features]
+default = ["fs"]
+fs = ["dep:keepass", "dep:yaml-rust2"]
+wasm = ["getrandom/js", "dep:getrandom03"]
+
+[dependencies]
+loro = "1"
+bip39 = { version = "2", features = ["rand", "zeroize"] }
+hkdf = "0.12"
+hmac = "0.13"
+sha1 = "0.11"
+sha2-totp = { package = "sha2", version = "0.11" }
+data-encoding = "2"
+sha2 = "0.10"
+ssh-key = { version = "0.6.7", features = ["ed25519", "rsa", "p256", "p384", "encryption", "getrandom"] }
+rsa = { version = "0.9", features = ["sha2"] }
+p256 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
+p384 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"] }
+signature = "2"
+sha1-ssh = { package = "sha1", version = "0.10", features = ["oid"] }
+chacha20poly1305 = "0.10"
+rand = "0.8"
+zeroize = { version = "1", features = ["derive"] }
+ulid = { version = "1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+regex = "1"
+getrandom = "0.2"
+# ulid -> rand 0.9 -> getrandom 0.3 needs its own browser backend
+getrandom03 = { package = "getrandom", version = "0.3", features = ["wasm_js"], optional = true }
+
+# Import/export (desktop only)
+keepass = { version = "0.17", optional = true }
+yaml-rust2 = { version = "0.13", optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+keepass = { version = "0.17", features = ["save_kdbx4"] }

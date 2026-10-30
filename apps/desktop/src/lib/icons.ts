@@ -1,0 +1,58 @@
+import {
+  Book,
+  Briefcase,
+  Car,
+  ChefHat,
+  Code,
+  CreditCard,
+  Database,
+  FileText,
+  Film,
+  Folder,
+  Gamepad2,
+  Globe,
+  GraduationCap,
+  Heart,
+  House,
+  KeyRound,
+  Link,
+  Music,
+  Plane,
+  Server,
+  ShoppingCart,
+  Star,
+  User,
+  Wrench,
+} from '@lucide/vue'
+import type { Component } from 'vue'
+
+export const TYPE_ICONS: Record<string, Component> = {
+  'file-text': FileText,
+  server: Server,
+  book: Book,
+  user: User,
+  globe: Globe,
+  'credit-card': CreditCard,
+  'chef-hat': ChefHat,
+  folder: Folder,
+  star: Star,
+  heart: Heart,
+  home: House,
+  briefcase: Briefcase,
+  'graduation-cap': GraduationCap,
+  car: Car,
+  film: Film,
+  music: Music,
+  'gamepad-2': Gamepad2,
+  plane: Plane,
+  'shopping-cart': ShoppingCart,
+  wrench: Wrench,
+  code: Code,
+  database: Database,
+  'key-round': KeyRound,
+  link: Link,
+}
+
+export function typeIcon(name: string | undefined | null): Component {
+  return (name && TYPE_ICONS[name]) || FileText
+}
