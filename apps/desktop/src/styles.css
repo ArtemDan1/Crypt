@@ -233,3 +233,106 @@
     display: none !important;
   }
 }
+
+/* Motion: short, calm, and off for people who asked for less of it. */
+@keyframes crypt-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes crypt-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes crypt-shake {
+  10%,
+  90% {
+    transform: translateX(-2px);
+  }
+  20%,
+  80% {
+    transform: translateX(4px);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-8px);
+  }
+  40%,
+  60% {
+    transform: translateX(8px);
+  }
+}
+@keyframes crypt-reveal {
+  from {
+    filter: blur(6px);
+    letter-spacing: 0.25em;
+    opacity: 0.3;
+  }
+  to {
+    filter: none;
+    opacity: 1;
+  }
+}
+@keyframes crypt-tick {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes crypt-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.anim-in {
+  animation: crypt-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-pop {
+  animation: crypt-pop 0.26s cubic-bezier(0.2, 1.1, 0.4, 1) both;
+}
+.anim-shake {
+  animation: crypt-shake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.anim-reveal {
+  animation: crypt-reveal 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.anim-tick {
+  animation: crypt-tick 0.3s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.anim-fade {
+  animation: crypt-fade 0.2s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-in,
+  .anim-pop,
+  .anim-reveal,
+  .anim-tick {
+    animation: crypt-fade 0.2s ease both;
+  }
+  .anim-shake {
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
