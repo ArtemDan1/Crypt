@@ -40,6 +40,7 @@ impl Settings {
 }
 
 pub struct AppState {
+    pub recent: crate::recent::RecentSecrets,
     pub app: Mutex<Option<tauri::AppHandle>>,
     pub agent: crate::agent::server::AgentHandle,
     pub agent_error: Mutex<Option<String>>,
@@ -64,6 +65,7 @@ impl AppState {
     ) -> Self {
         let settings = Settings::load(&settings_path);
         Self {
+            recent: Default::default(),
             app: Mutex::new(None),
             agent: Default::default(),
             agent_error: Mutex::new(None),

@@ -4,6 +4,7 @@ import { useSession } from '@/stores/session'
 export const router = createRouter({
   history: createWebHashHistory(),
   routes: [
+    { path: '/tray', component: () => import('@/views/Tray.vue') },
     { path: '/onboarding', component: () => import('@/views/Onboarding.vue') },
     { path: '/unlock', component: () => import('@/views/Unlock.vue') },
     {
@@ -29,6 +30,7 @@ export const router = createRouter({
 const gated = new Set(['/onboarding', '/unlock'])
 
 router.beforeEach(async (to) => {
+  if (to.path === '/tray') return true
   const s = useSession()
   const st = s.status.state
   if (st === 'noVault' && to.path !== '/onboarding') return '/onboarding'

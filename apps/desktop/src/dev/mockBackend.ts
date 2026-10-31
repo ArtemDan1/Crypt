@@ -381,6 +381,10 @@ const mockCandidates: SshCandidate[] = [
 ]
 let sshConfigured = false
 const secretHandlers: Record<string, (a: any) => unknown> = {
+  recent_secrets: () => [],
+  tray_hide: () => {},
+  app_quit: () => {},
+  show: () => {},
   secret_overview: ({ id }) => secretOverview(id),
   set_secret: ({ id, name, value }) => {
     if (name === 'private_key' || (name === 'public_key' && secretRecord(id).secret_kind === 'sshkey'))

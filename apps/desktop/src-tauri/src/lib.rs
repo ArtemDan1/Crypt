@@ -7,6 +7,7 @@ pub mod error;
 pub mod ssh_config;
 pub mod state;
 pub mod tray;
+pub mod recent;
 pub mod unlock;
 
 use commands::library as lib_cmd;
@@ -61,6 +62,10 @@ pub fn run() {
             commands::secrets::cmd::secret_overview,
             commands::secrets::cmd::reveal_secret,
             commands::secrets::cmd::copy_secret,
+            commands::secrets::cmd::recent_secrets,
+            lifecycle::show,
+            lifecycle::tray_hide,
+            lifecycle::app_quit,
             commands::secrets::cmd::set_secret,
             commands::secrets::cmd::secret_history,
             commands::secrets::cmd::reveal_secret_revision,

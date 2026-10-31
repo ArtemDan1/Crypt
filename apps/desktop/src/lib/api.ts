@@ -55,6 +55,10 @@ export async function call<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const api = {
+  recentSecrets: (limit = 6) => call<Id[]>('recent_secrets', { limit }),
+  trayHide: () => call<void>('tray_hide'),
+  appQuit: () => call<void>('app_quit'),
+  show: () => call<void>('show'),
   secretOverview: (id: Id) => call<SecretOverview>('secret_overview', { id }),
   revealSecret: (id: Id, name: string) => call<string>('reveal_secret', { id, name }),
   copySecret: (id: Id, name: string) => call<void>('copy_secret', { id, name }),

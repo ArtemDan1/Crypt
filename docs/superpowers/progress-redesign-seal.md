@@ -36,3 +36,6 @@ Task 14: partial — Unlock.vue готов (коммит 5e16f17); Onboarding.vu
 
 Task 14: Ruling: Prettier применён также к AppShell.vue и TransferSection.vue — исходный общий check падал на этих двух файлах; только форматирование — цена ошибки: лишний форматирующий diff.
 Task 14: complete — Onboarding: тест скрытия/подтверждения RED→GREEN; vitest 63/63, build, prettier --check src, cargo test PASS (cargo вне sandbox из-за Unix-сокета).
+Task 15: Ruling: добавлены vault-unlocked и session-activity между окнами — иначе вход из трея не обновляет главное окно, а скрытый трей блокирует активную сессию своим таймером — цена ошибки: лишние события и рассинхронизация таймеров до 500 мс.
+Task 15: Ruling: нативная визуальная проверка трея отложена — в доступных инструментах нет управления окном/снимка macOS; автоматические Rust/TS проверки выполнены — цена ошибки: положение и закрытие окна требуют ручной проверки на Mac.
+Task 15: automated complete — recent RED→GREEN; shared activity RED→GREEN; vitest 64/64, build, prettier --check src, cargo test PASS; native smoke pending.

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { emit } from '@tauri-apps/api/event'
 import { idleTimer } from '@/lib/idle'
 import { api } from '@/lib/api'
 import type { UnlockMethods, VaultStatus } from '@/lib/types'
@@ -58,7 +59,15 @@ export const useSession = defineStore('session', () => {
   const idle = idleTimer(() => {
     lock()
   }, 15 * 60_000)
-  const poke = () => idle.activity()
+  const activity = () => idle.activity()
+  let lastBroadcast = 0
+  const poke = () => {
+    activity()
+    if (Date.now() - lastBroadcast >= 500) {
+      lastBroadcast = Date.now()
+      void emit('session-activity').catch(() => {})
+    }
+  }
   if (typeof window !== 'undefined') {
     for (const ev of ['pointerdown', 'keydown', 'wheel'] as const)
       window.addEventListener(ev, poke, { passive: true, capture: true })
@@ -96,6 +105,7 @@ export const useSession = defineStore('session', () => {
     methods,
     refresh,
     applyAutolock,
+    activity,
     autolockLeft,
     autolockTotal,
     create,

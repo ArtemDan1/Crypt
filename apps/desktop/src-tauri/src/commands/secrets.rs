@@ -233,6 +233,7 @@ pub fn copy_value(st: &AppState, id: &RecordId, name: &str) -> ApiResult<()> {
         allow_value(name)?;
         let value = v.secret_value(id, name)?.unwrap_or_default();
         copy_with_clear(st.clipboard.clone(), &value, clear_after(st));
+        st.recent.touch(*id);
         Ok(())
     })
 }
@@ -296,6 +297,13 @@ fn now() -> u64 {
         .as_secs()
 }
 pub mod cmd {
+    #[tauri::command]
+    pub fn recent_secrets(st: tauri::State<'_, std::sync::Arc<crate::state::AppState>>, limit: usize) -> Vec<crypt_core::RecordId> {
+        let guard = st.vault_guard();
+        if guard.is_none() { return vec![]; }
+        st.recent.list(limit)
+    }
+
     use super::*;
     use tauri::State;
     #[tauri::command]
@@ -415,6 +423,7 @@ pub mod cmd {
         with_vault(&st, |v| {
             if let Some(code) = v.totp_code(&id, now())? {
                 copy_with_clear(st.clipboard.clone(), &code.code, clear_after(&st));
+                st.recent.touch(id);
             }
             Ok(())
         })

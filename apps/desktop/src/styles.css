@@ -347,3 +347,9 @@
 .anim-fresh {
   animation: crypt-fresh 0.9s ease-out both;
 }
+
+html.tray-window,
+.tray-window body,
+.tray-window #app {
+  background: transparent !important;
+}

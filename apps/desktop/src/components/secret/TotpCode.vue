@@ -5,7 +5,7 @@ import { Copy } from '@lucide/vue'
 import { api } from '@/lib/api'
 import type { TotpCode as Code } from '@/lib/types'
 import { useSession } from '@/stores/session'
-const props = defineProps<{ recordId: string }>(),
+const props = defineProps<{ recordId: string; compact?: boolean }>(),
   code = ref<Code | null>(null)
 let active = true,
   request = 0,
@@ -57,10 +57,11 @@ async function copy() {
   <button
     v-if="code"
     class="bg-background hover:bg-foreground/[.03] flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-colors active:scale-[.99]"
+    :class="compact ? '!gap-2 !p-2' : ''"
     aria-label="Копировать код TOTP"
     @click="copy"
   >
-    <svg class="size-11 -rotate-90" viewBox="0 0 44 44" aria-hidden="true">
+    <svg :class="compact ? 'size-6 -rotate-90' : 'size-11 -rotate-90'" viewBox="0 0 44 44" aria-hidden="true">
       <circle cx="22" cy="22" r="18" fill="none" class="stroke-muted" stroke-width="4" />
       <circle
         cx="22"
@@ -76,9 +77,12 @@ async function copy() {
       /></svg
     ><span class="flex-1"
       ><span class="text-muted-foreground block text-xs">Одноразовый код · {{ code.remaining }} с</span
-      ><span :key="code.code" class="anim-in block font-mono text-[26px] font-semibold tracking-[.06em]">{{
-        code.code.replace(/(.{3})(?=.)/g, '$1 ')
-      }}</span></span
+      ><span
+        :key="code.code"
+        class="anim-in block font-mono font-semibold tracking-[.06em]"
+        :class="compact ? 'text-sm' : 'text-[26px]'"
+        >{{ code.code.replace(/(.{3})(?=.)/g, '$1 ') }}</span
+      ></span
     ><span class="text-muted-foreground flex items-center gap-1.5 text-xs"><Copy class="size-4" /> Скопировать</span>
   </button>
 </template>

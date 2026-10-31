@@ -12,6 +12,7 @@ import { useSession } from './stores/session'
 
 // System theme by default; Settings can pin light or dark.
 initTheme()
+if (window.location.hash === '#/tray') document.documentElement.classList.add('tray-window')
 
 // No browser menu (Reload / Inspect) outside text fields; our own menus call preventDefault first.
 if (!import.meta.env.DEV)
@@ -29,6 +30,12 @@ async function boot() {
   const session = useSession()
   await session.refresh().catch(() => {})
   app.use(router).mount('#app')
+
+  await listen('session-activity', () => session.activity()).catch(() => {})
+  await listen('vault-unlocked', async () => {
+    await session.refresh()
+    if (router.currentRoute.value.path === '/unlock') await router.replace('/')
+  }).catch(() => {})
 
   // Sleep / screen lock: Rust asks us to save pending edits, then drops the key.
   await listen('vault-will-lock', async () => {
