@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { listen } from '@tauri-apps/api/event'
 import { api } from './lib/api'
+import { initTheme } from './lib/theme'
 import type { VaultStatus } from './lib/types'
 import './styles.css'
 import 'vue-sonner/style.css'
@@ -9,11 +10,8 @@ import App from './App.vue'
 import { router } from './router'
 import { useSession } from './stores/session'
 
-// Dark by default; follow the system when it asks for light.
-const light = window.matchMedia('(prefers-color-scheme: light)')
-const applyTheme = () => document.documentElement.classList.toggle('dark', !light.matches)
-applyTheme()
-light.addEventListener('change', applyTheme)
+// System theme by default; Settings can pin light or dark.
+initTheme()
 
 // No browser menu (Reload / Inspect) outside text fields; our own menus call preventDefault first.
 if (!import.meta.env.DEV)
