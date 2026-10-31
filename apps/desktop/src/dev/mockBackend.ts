@@ -382,6 +382,12 @@ const mockCandidates: SshCandidate[] = [
 ]
 let sshConfigured = false
 const secretHandlers: Record<string, (a: any) => unknown> = {
+  inspect_backup: () => ({ version: 1, created_at: Date.now() - 86400000, objects: 12 }),
+  restore_backup: () => {
+    db.exists = true
+    db.unlocked = true
+    return { state: 'unlocked', vaultId: 'demo' }
+  },
   export_backup: ({ path }) => {
     const now = Date.now()
     db.settings.lastBackupAt = now

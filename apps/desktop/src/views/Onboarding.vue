@@ -207,6 +207,13 @@ async function finish(destination = '/') {
             <div class="text-muted-foreground mt-1 text-[13px]">Если фраза уже есть</div>
           </button>
         </div>
+        <button
+          class="w-full rounded-xl border bg-card p-5 text-left hover:border-primary"
+          @click="router.push('/restore')"
+        >
+          <div class="font-medium">Из бэкапа</div>
+          <div class="mt-1 text-[13px] text-muted-foreground">Восстановить всю базу из файла .cryptbackup</div>
+        </button>
       </section>
 
       <!-- 2a. Show seed -->

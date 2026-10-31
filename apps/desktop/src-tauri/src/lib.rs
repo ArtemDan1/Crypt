@@ -57,6 +57,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::backup::export_backup,
+            commands::backup::inspect_backup,
+            commands::backup::restore_backup,
             ssh_config::ssh_config_status,
             ssh_config::configure_ssh_config,
             ssh_config::unconfigure_ssh_config,

@@ -19,6 +19,9 @@ export const useSession = defineStore('session', () => {
   async function create(words: string[]) {
     status.value = await api.createVault(words)
   }
+  async function restoreBackup(path: string, words: string[]) {
+    status.value = await api.restoreBackup(path, words)
+  }
   async function unlockSeed(words: string[]) {
     status.value = await api.unlockWithSeed(words)
   }
@@ -110,6 +113,7 @@ export const useSession = defineStore('session', () => {
     autolockTotal,
     create,
     unlockSeed,
+    restoreBackup,
     unlockBiometric,
     unlockPin,
     beforeLock,

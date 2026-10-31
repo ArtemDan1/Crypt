@@ -35,6 +35,42 @@ pub async fn export_backup(st: tauri::State<'_, std::sync::Arc<AppState>>, path:
     tauri::async_runtime::spawn_blocking(move || export(&state,Path::new(&path),pin.as_deref().map(String::as_str))).await.map_err(|_|ApiError::new("Internal","Внутренняя ошибка"))?
 }
 
+
+fn read_backup_file(path: &Path) -> ApiResult<Vec<u8>> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).map_err(crypt_core::CryptError::from)?;
+    if !file.metadata().map_err(crypt_core::CryptError::from)?.is_file() { return Err(ApiError::new("BackupFormat", "Это не файл бэкапа Crypt")); }
+    let mut bytes = Vec::new(); file.take(crypt_core::backup::MAX_BACKUP_BYTES + 1).read_to_end(&mut bytes).map_err(crypt_core::CryptError::from)?;
+    if bytes.len() as u64 > crypt_core::backup::MAX_BACKUP_BYTES { return Err(ApiError::new("BackupFormat", "Файл бэкапа больше 2 ГБ")); }
+    Ok(bytes)
+}
+pub fn restore_file(st: &AppState, path: &Path, words: Vec<String>) -> ApiResult<crate::commands::lifecycle::VaultStatus> {
+    let words = zeroize::Zeroizing::new(words);
+    let phrase = zeroize::Zeroizing::new(words.join(" "));
+    let seed = crypt_core::SeedPhrase::parse(&phrase)?;
+    let guard = st.vault_guard();
+    if guard.is_some() || st.vault_dir.exists() { return Err(crypt_core::CryptError::VaultExists.into()); }
+    let bytes = read_backup_file(path)?;
+    crypt_core::backup::restore_backup(&bytes,&seed,&st.vault_dir)?;
+    let vault = crypt_core::Vault::open_with_seed(&st.vault_dir,&seed)?;
+    drop(guard);
+    Ok(crate::commands::lifecycle::install(st,vault))
+}
+#[tauri::command]
+pub async fn inspect_backup(path: String) -> ApiResult<BackupHeader> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut file = std::fs::File::open(path).map_err(crypt_core::CryptError::from)?;
+        let meta = file.metadata().map_err(crypt_core::CryptError::from)?;
+        if !meta.is_file() || meta.len() > crypt_core::backup::MAX_BACKUP_BYTES { return Err(ApiError::new("BackupFormat","Файл не подходит для восстановления")); }
+        Ok(crypt_core::backup::read_backup_header(&mut file)?)
+    }).await.map_err(|_|ApiError::new("Internal","Внутренняя ошибка"))?
+}
+#[tauri::command]
+pub async fn restore_backup(st: tauri::State<'_, std::sync::Arc<AppState>>, path: String, words: Vec<String>) -> ApiResult<crate::commands::lifecycle::VaultStatus> {
+    let state = st.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || restore_file(&state,Path::new(&path),words)).await.map_err(|_|ApiError::new("Internal","Внутренняя ошибка"))?
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -59,5 +95,34 @@ mod tests {
         let (d,st) = state(FakeAuthenticator::err(AuthError::Cancelled));
         let path = d.path().join("backup.cryptbackup");
         assert!(export(&st,&path,None).is_err()); assert!(!path.exists());
+    }
+}
+
+#[cfg(test)]
+mod restore_tests {
+    use super::*;
+    use crate::{commands::lifecycle::{create_vault,generate_seed,status,VaultStatus}, unlock::{keystore::MemoryKeyStore,authenticator::FakeAuthenticator}};
+    fn state(root: &Path) -> AppState { AppState::new(root.join("vault"),root.join("settings.json"),Box::new(MemoryKeyStore::default()),Box::new(FakeAuthenticator::ok())) }
+    fn backup(d: &Path) -> (std::path::PathBuf, Vec<String>, crypt_core::RecordId) {
+        let source = state(&d.join("source")); let words=generate_seed(); create_vault(&source,words.clone()).unwrap();
+        let id = source.vault_guard().as_mut().unwrap().create_record(crypt_core::NewRecord { title:"Restored".into(),..Default::default() }).unwrap();
+        let path=d.join("copy.cryptbackup"); export(&source,&path,None).unwrap(); (path,words,id)
+    }
+    #[test]
+    fn restore_when_vault_exists_fails() {
+        let d=tempfile::tempdir().unwrap(); let (path,words,_)=backup(d.path()); let st=state(&d.path().join("target")); create_vault(&st,generate_seed()).unwrap();
+        assert_eq!(restore_file(&st,&path,words).unwrap_err().code,"VaultExists");
+    }
+    #[test]
+    fn restore_opens_vault() {
+        let d=tempfile::tempdir().unwrap(); let (path,words,id)=backup(d.path()); let st=state(&d.path().join("target"));
+        assert!(matches!(restore_file(&st,&path,words).unwrap(),VaultStatus::Unlocked {..}));
+        assert_eq!(st.vault_guard().as_ref().unwrap().get(&id).unwrap().title,"Restored");
+    }
+    #[test]
+    fn restore_wrong_seed_keeps_novault() {
+        let d=tempfile::tempdir().unwrap(); let (path,_,_)=backup(d.path()); let st=state(&d.path().join("target"));
+        assert_eq!(restore_file(&st,&path,generate_seed()).unwrap_err().code,"BackupSeedMismatch");
+        assert!(matches!(status(&st),VaultStatus::NoVault)); assert!(!st.vault_dir.exists());
     }
 }
