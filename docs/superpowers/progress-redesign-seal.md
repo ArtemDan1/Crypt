@@ -41,3 +41,7 @@ Task 15: Ruling: нативная визуальная проверка трея
 Task 15: automated complete — recent RED→GREEN; shared activity RED→GREEN; vitest 64/64, build, prettier --check src, cargo test PASS; native smoke pending.
 Task 16: Ruling: визуальный обход светлой/тёмной темы и системного reduced-motion остаётся ручным — нет browser/computer инструмента для такого обхода — цена ошибки: визуальные регрессии могут остаться; автоматические тесты и численный контраст не заменяют обход.
 Task 16: automated complete — vitest 64/64, build, prettier --check src, cargo test PASS; contrast light background/card 5.31/5.55, dark 6.84/6.24; README updated; visual smoke pending.
+
+Backup/import pre-flight: T1 BackupHeader → T2 export/T3 inspect/restore; T4 LoginDraft → T6 commands/T7 UI; T5 OtpDraft → T6 token cache/T7 UI; T6 Imported → T7 report. Interfaces consistent; header.objects counts archive entries.
+Task 1: Ruling: backup/import — после валидационного open_with_seed удаляется временный device.json перед rename — иначе проверочное открытие нарушает тест отсутствия device.json до первого открытия — цена ошибки: новый peer создаётся ещё раз при первом рабочем открытии.
+Task 1: backup/import automated complete — 7 backup tests RED→GREEN, cargo test PASS, vitest 64/64, build, prettier --check src PASS.

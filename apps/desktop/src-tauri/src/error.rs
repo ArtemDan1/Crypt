@@ -17,6 +17,8 @@ impl ApiError {
 impl From<CryptError> for ApiError {
     fn from(e: CryptError) -> Self {
         let (code, message): (&str, String) = match &e {
+            CryptError::BackupFormat(m) => ("BackupFormat", m.clone()),
+            CryptError::BackupSeedMismatch => ("BackupSeedMismatch", "Эта фраза не подходит к файлу бэкапа".into()),
             CryptError::PassphraseRequired => ("PassphraseRequired", "Ключ защищён паролем".into()),
             CryptError::WrongPassphrase => ("WrongPassphrase", "Неверный пароль ключа".into()),
             CryptError::Io(_) => ("Io", "Ошибка чтения или записи файлов хранилища".into()),

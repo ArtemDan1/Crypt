@@ -72,3 +72,6 @@ pub mod r#gen;
 pub mod totp;
 
 pub mod ssh;
+
+#[cfg(feature = "fs")]
+pub use vault::backup;
