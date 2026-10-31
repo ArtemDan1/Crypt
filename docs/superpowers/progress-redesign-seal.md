@@ -33,3 +33,6 @@ Task 12: Ruling: кнопка «Удалить» в диалоге неакти�
 Task 12: complete (commits 5c506b3..c9cce65, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  63 passed (63))
 Task 13: complete (commits c9cce65..e7b09b2, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  63 passed (63))
 Task 14: partial — Unlock.vue готов (коммит 5e16f17); Onboarding.vue ещё не переделан
+
+Task 14: Ruling: Prettier применён также к AppShell.vue и TransferSection.vue — исходный общий check падал на этих двух файлах; только форматирование — цена ошибки: лишний форматирующий diff.
+Task 14: complete — Onboarding: тест скрытия/подтверждения RED→GREEN; vitest 63/63, build, prettier --check src, cargo test PASS (cargo вне sandbox из-за Unix-сокета).

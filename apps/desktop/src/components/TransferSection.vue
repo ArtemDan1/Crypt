@@ -145,7 +145,12 @@ async function exportMd() {
           <button type="button" class="text-muted-foreground hover:text-foreground" @click="pickKeyfile">
             {{ keyfile ? 'Другой…' : 'Добавить ключ-файл…' }}
           </button>
-          <button v-if="keyfile" type="button" class="text-muted-foreground hover:text-foreground" @click="keyfile = null">
+          <button
+            v-if="keyfile"
+            type="button"
+            class="text-muted-foreground hover:text-foreground"
+            @click="keyfile = null"
+          >
             Убрать
           </button>
         </div>
