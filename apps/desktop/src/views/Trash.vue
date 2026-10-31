@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { RotateCcw, TriangleAlert } from '@lucide/vue'
+import { Eye, RotateCcw, TriangleAlert } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import KindTile from '@/components/crypt/KindTile.vue'
+import TrashPreview from '@/components/TrashPreview.vue'
 import { toneForType } from '@/lib/tones'
 import { api, CryptApiError } from '@/lib/api'
 import { typeIcon } from '@/lib/icons'
@@ -23,6 +24,16 @@ watch(() => lib.version, load, { immediate: true })
 
 const emptyAll = () => run(() => api.emptyTrash(), 'Корзина очищена')
 const leaving = ref<Record<string, 'restore' | 'purge'>>({})
+const preview = ref<RecordSummary | null>(null)
+const previewOpen = ref(false)
+function openPreview(r: RecordSummary) {
+  preview.value = r
+  previewOpen.value = true
+}
+function restoreFromPreview(r: RecordSummary) {
+  previewOpen.value = false
+  restore(r)
+}
 const folderName = (id: string | null) => (id ? lib.folders.find((f) => f.id === id)?.name : null)
 async function restore(r: RecordSummary) {
   leaving.value = { ...leaving.value, [r.id]: 'restore' }
@@ -96,17 +107,23 @@ async function run(fn: () => Promise<unknown>, msg: string) {
             size="lg"
             class="size-7! rounded-[7px]! [&_svg]:size-[15px]!"
           />
-          <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+          <button
+            type="button"
+            class="focus-visible:ring-ring/50 flex min-w-0 flex-1 cursor-pointer flex-col justify-center gap-0.5 self-stretch rounded-md text-left outline-none focus-visible:ring-3"
+            :title="`Посмотреть «${r.title || 'Без названия'}»`"
+            @click="openPreview(r)"
+          >
             <span class="truncate text-[14px] font-medium">{{ r.title || 'Без названия' }}</span>
             <span class="text-muted-foreground text-xs"
               >{{ folderName(r.folder) ? `Из «${folderName(r.folder)}» · ` : '' }}удалено
               {{ fmt.format(r.updated_at) }}</span
             >
-          </span>
+          </button>
           <span
             v-if="confirmId !== r.id"
             class="flex gap-1.5 opacity-0 transition-opacity group-hover/t:opacity-100 focus-within:opacity-100"
           >
+            <Button variant="ghost" size="sm" @click="openPreview(r)"><Eye class="size-3.5" /> Посмотреть</Button>
             <Button variant="outline" size="sm" @click="restore(r)"><RotateCcw class="size-3.5" /> Восстановить</Button>
             <Button variant="ghost" size="sm" class="text-destructive" @click="confirmId = r.id"
               >Удалить навсегда</Button
@@ -121,7 +138,8 @@ async function run(fn: () => Promise<unknown>, msg: string) {
           </span>
         </div>
       </TransitionGroup>
-      <div v-else class="anim-in flex h-[480px] flex-col items-center justify-center gap-3.5 text-center">
+      <TrashPreview v-model:open="previewOpen" :record="preview" @restore="restoreFromPreview" />
+      <div v-if="!items.length" class="anim-in flex h-[480px] flex-col items-center justify-center gap-3.5 text-center">
         <svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true">
           <circle cx="48" cy="48" r="44" class="fill-primary-soft" />
           <rect x="30" y="38" width="36" height="34" rx="6" fill="none" class="stroke-primary" stroke-width="3" />

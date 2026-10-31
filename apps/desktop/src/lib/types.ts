@@ -100,6 +100,8 @@ export interface RecordSummary {
   folder: Id | null
   tags: string[]
   secret_kind: SecretKind | null
+  /** Login username, for lists and search. */
+  username?: string | null
   updated_at: number
 }
 
@@ -222,6 +224,8 @@ export interface SnapshotRestoreReport {
   restored: number
   trashed: number
   missing: number
+  /** Secrets imported after the snapshot and never edited, removed for good. */
+  removed: number
 }
 
 export interface Imported<T> {

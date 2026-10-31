@@ -192,3 +192,74 @@ fn snapshot_restore_brings_back_contents_and_trash_state() {
     assert!(v.snapshots().is_empty());
     assert!(v.restore_snapshot(&snap.id).is_err());
 }
+
+#[test]
+fn snapshot_restore_removes_untouched_imported_secrets() {
+    use crypt_core::import_csv::LoginDraft;
+    let (_d, _s, mut v) = vault();
+    let snap = v.create_snapshot("Перед импортом").unwrap();
+    let draft = |t: &str| LoginDraft {
+        title: t.into(),
+        url: Some(format!("https://{t}")),
+        username: format!("user-{t}"),
+        password: zeroize::Zeroizing::new("pw".into()),
+        note: None,
+        totp: None,
+    };
+    v.import_logins(vec![draft("a.com"), draft("b.com")], "Импорт")
+        .unwrap();
+    let manual = v
+        .create_record(NewRecord {
+            secret_kind: Some(SecretKind::Token),
+            ..new("Ручной")
+        })
+        .unwrap();
+    let list = v.list(&ListFilter::default());
+    let edited = list.iter().find(|r| r.title == "b.com").unwrap().id;
+    assert_eq!(
+        list.iter()
+            .find(|r| r.title == "a.com")
+            .unwrap()
+            .username
+            .as_deref(),
+        Some("user-a.com")
+    );
+    v.set_title(&edited, "b.com (мой)").unwrap();
+
+    let report = v.restore_snapshot(&snap.id).unwrap();
+    assert_eq!(report.removed, 1);
+    let titles: Vec<_> = v
+        .list(&ListFilter::default())
+        .into_iter()
+        .map(|r| r.title)
+        .collect();
+    assert!(!titles.contains(&"a.com".to_string()));
+    assert!(titles.contains(&"b.com (мой)".to_string()));
+    assert!(v.get(&manual).is_ok());
+}
+
+#[test]
+fn delete_many_trashes_notes_and_purges_secrets() {
+    let (_d, _s, mut v) = vault();
+    let note = v.create_record(new("Заметка")).unwrap();
+    let secret = v
+        .create_record(NewRecord {
+            secret_kind: Some(SecretKind::Token),
+            ..new("Токен")
+        })
+        .unwrap();
+    assert_eq!(v.delete_many(&[note, secret]).unwrap(), (1, 1));
+    assert!(v.get(&note).unwrap().deleted_at.is_some());
+    assert!(v.get(&secret).is_err());
+}
+
+#[test]
+fn vault_name_defaults_and_survives_reopen() {
+    let (d, seed, mut v) = vault();
+    assert_eq!(v.name(), "Личное");
+    assert!(v.rename("   ").is_err());
+    v.rename("  Работа ").unwrap();
+    drop(v);
+    let v = Vault::open_with_seed(d.path(), &seed).unwrap();
+    assert_eq!(v.name(), "Работа");
+}

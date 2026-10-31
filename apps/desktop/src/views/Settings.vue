@@ -249,24 +249,26 @@ async function copyExport() {
   <div class="flex h-full">
     <nav aria-label="Разделы настроек" class="relative flex w-[220px] shrink-0 flex-col gap-0.5 px-3 py-8">
       <h1 data-tauri-drag-region class="mb-3.5 ml-3 text-[22px] font-semibold tracking-[-.02em]">Настройки</h1>
-      <span
-        aria-hidden="true"
-        class="bg-primary absolute left-3 h-[22px] w-[3px] rounded-full transition-[top] duration-350 ease-[cubic-bezier(.3,1.2,.5,1)]"
-        :style="{ top: `${81 + markTop}px` }"
-      />
-      <button
-        v-for="x in SECTIONS"
-        :key="x.id"
-        class="flex h-9 items-center rounded-lg pr-3 pl-[18px] text-left text-[14px] transition-colors"
-        :class="[
-          section === x.id ? 'bg-accent font-semibold' : 'hover:bg-foreground/[.05] font-medium',
-          x.id === 'danger' && 'text-destructive',
-        ]"
-        :aria-current="section === x.id ? 'page' : undefined"
-        @click="pick(x.id)"
-      >
-        {{ x.label }}
-      </button>
+      <div class="relative flex flex-col gap-0.5">
+        <span
+          aria-hidden="true"
+          class="bg-primary pointer-events-none absolute left-2 z-10 h-[18px] w-[3px] rounded-full transition-[top] duration-350 ease-[cubic-bezier(.3,1.2,.5,1)]"
+          :style="{ top: `${markTop + 9}px` }"
+        />
+        <button
+          v-for="x in SECTIONS"
+          :key="x.id"
+          class="flex h-9 items-center rounded-lg pr-3 pl-5 text-left text-[14px] transition-colors"
+          :class="[
+            section === x.id ? 'bg-accent font-semibold' : 'hover:bg-foreground/[.05] font-medium',
+            x.id === 'danger' && 'text-destructive',
+          ]"
+          :aria-current="section === x.id ? 'page' : undefined"
+          @click="pick(x.id)"
+        >
+          {{ x.label }}
+        </button>
+      </div>
     </nav>
     <div class="flex-1 overflow-auto py-9 pr-12 pl-6">
       <div :key="section" class="anim-in flex max-w-[680px] flex-col gap-[18px]">

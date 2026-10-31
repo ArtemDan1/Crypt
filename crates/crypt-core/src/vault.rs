@@ -32,6 +32,7 @@ use crate::model::record::{
 use std::collections::{BTreeMap, HashSet};
 use zeroize::Zeroizing;
 
+pub const DEFAULT_VAULT_NAME: &str = "Личное";
 pub struct Vault {
     index: crate::index::Index,
     records: BTreeMap<RecordId, RecordDoc>,
@@ -198,6 +199,30 @@ impl Vault {
             m.remove_type(id);
             Ok(())
         })
+    }
+    /// Name shown in the sidebar; defaults to «Личное».
+    pub fn name(&self) -> String {
+        self.meta
+            .vault_name()
+            .filter(|n| !n.trim().is_empty())
+            .unwrap_or_else(|| DEFAULT_VAULT_NAME.into())
+    }
+    pub fn rename(&mut self, name: &str) -> Result<()> {
+        let name = name.trim();
+        if name.is_empty() {
+            return Err(CryptError::Validation(
+                "Название хранилища не может быть пустым".into(),
+            ));
+        }
+        if name.chars().count() > 60 {
+            return Err(CryptError::Validation(
+                "Название хранилища слишком длинное".into(),
+            ));
+        }
+        if name == self.name() {
+            return Ok(());
+        }
+        self.edit_meta(|m| m.set_vault_name(name))
     }
     pub fn folders(&self) -> Vec<Folder> {
         self.meta.list_folders()
@@ -576,6 +601,60 @@ impl Vault {
         self.index.remove(id);
         self.remove_object_files(id)
     }
+    /// Delete several records at once: secrets are purged, the rest go to trash.
+    /// Returns (trashed, purged).
+    pub fn delete_many(&mut self, ids: &[RecordId]) -> Result<(usize, usize)> {
+        let mut secrets = Vec::new();
+        let mut trashed = 0;
+        for id in ids {
+            if self.record(id)?.secret_kind().is_some() {
+                secrets.push(*id);
+            } else if self.record(id)?.deleted_at().is_none() {
+                self.edit_record(id, |r| r.set_deleted_at(Some(now_ms())))?;
+                trashed += 1;
+            }
+        }
+        self.purge_many(&secrets)?;
+        Ok((trashed, secrets.len()))
+    }
+    /// `purge` for many records with a single meta write and directory scan.
+    pub fn purge_many(&mut self, ids: &[RecordId]) -> Result<()> {
+        if ids.is_empty() {
+            return Ok(());
+        }
+        for id in ids {
+            self.record(id)?;
+        }
+        let now = now_ms();
+        self.edit_meta(|m| {
+            for id in ids {
+                m.add_tombstone(id, now);
+            }
+            Ok(())
+        })?;
+        let mut prefixes = Vec::with_capacity(ids.len());
+        for id in ids {
+            self.records.remove(id);
+            self.index.remove(id);
+            match fs::remove_file(self.paths.object(id)) {
+                Ok(()) => {}
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+                Err(e) => return Err(e.into()),
+            }
+            prefixes.push(format!("{id}.bin."));
+        }
+        for entry in fs::read_dir(self.paths.objects_dir())? {
+            let entry = entry?;
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.ends_with(".tmp") && prefixes.iter().any(|p| name.starts_with(p.as_str())) {
+                fs::remove_file(entry.path())?;
+            }
+        }
+        #[cfg(unix)]
+        fs::File::open(self.paths.objects_dir())?.sync_all()?;
+        Ok(())
+    }
     fn remove_object_files(&self, id: &RecordId) -> Result<()> {
         match fs::remove_file(self.paths.object(id)) {
             Ok(()) => {}
@@ -841,8 +920,9 @@ impl Vault {
             Ok(())
         })
     }
-    /// Roll every record back to the snapshot. Nothing is destroyed: reverts add versions,
-    /// later non-secret records go to trash, secrets created later are kept.
+    /// Roll every record back to the snapshot. Reverts add versions and later non-secret
+    /// records go to trash. Later secrets are kept, except untouched imported ones,
+    /// which are removed (secrets have no trash).
     pub fn restore_snapshot(&mut self, id: &SnapshotId) -> Result<SnapshotRestoreReport> {
         let snap = self
             .meta
@@ -890,13 +970,28 @@ impl Vault {
             self.edit_record(&rid, |r| r.set_deleted_at(Some(now_ms())))?;
             report.trashed += 1;
         }
+        // Secrets cannot go to trash. Undo imports by removing secrets that were
+        // imported after the snapshot and never touched since; hand-made ones stay.
+        let peer = self.peer_id;
+        let imported: Vec<RecordId> = self
+            .records
+            .values()
+            .filter(|r| {
+                !snap.records.contains_key(&r.id())
+                    && r.secret_kind().is_some()
+                    && r.versions(peer).iter().all(|v| v.kind == "import")
+            })
+            .map(|r| r.id())
+            .collect();
+        self.purge_many(&imported)?;
+        report.removed = imported.len();
         Ok(report)
     }
 }
 
 pub mod backup;
 
-pub mod import_csv;
 pub mod import_apply;
+pub mod import_csv;
 
 pub mod import_otp;

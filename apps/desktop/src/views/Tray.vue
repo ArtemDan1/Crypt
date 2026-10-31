@@ -139,12 +139,6 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <main class="flex h-full flex-col overflow-hidden rounded-[14px] border bg-card shadow-xl">
-    <header class="flex items-center gap-3 border-b p-4">
-      <CryptMark :size="28" /><span class="font-semibold">Crypt</span
-      ><span class="ml-auto text-xs text-muted-foreground">{{
-        session.status.state === 'unlocked' ? 'Открыт' : 'Под печатью'
-      }}</span>
-    </header>
     <template v-if="session.status.state === 'unlocked'">
       <input
         v-model="query"

@@ -228,8 +228,14 @@ async function saveAsSecret() {
               <Switch v-model="o.avoidAmbiguous" aria-label="Исключить похожие" />
             </label>
             <label class="flex items-center gap-3 text-[13px]">
-              <span class="flex-1">Каждый набор хотя бы раз</span>
-              <Switch v-model="o.eachClass" aria-label="Каждый набор хотя бы раз" />
+              <span class="flex flex-1 flex-col gap-0.5"
+                >Символ из каждой группы
+                <span class="text-muted-foreground text-xs"
+                  >В пароле точно будет хотя бы одна строчная, заглавная, цифра и т.д. — из каждой включённой
+                  группы</span
+                ></span
+              >
+              <Switch v-model="o.eachClass" aria-label="Символ из каждой включённой группы" />
             </label>
           </div>
         </div>

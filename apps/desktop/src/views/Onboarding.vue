@@ -170,8 +170,10 @@ async function finish(destination = '/') {
     <aside class="hidden w-[300px] shrink-0 flex-col bg-sidebar p-9 text-sidebar-foreground sm:flex">
       <div data-tauri-drag-region class="h-8" />
       <CryptMark :size="64" />
-      <h2 class="mt-6 text-2xl font-semibold">Ваше. Под печатью.</h2>
-      <p class="mt-3 text-sm text-sidebar-foreground/70">Секреты остаются у вас. Ключ — только в ваших руках.</p>
+      <h2 class="mt-6 text-2xl font-semibold">Только у вас.</h2>
+      <p class="mt-3 text-sm text-sidebar-foreground/70">
+        Всё шифруется прямо на этом Mac. Ключ от хранилища — только в ваших руках.
+      </p>
       <ol class="mt-12 space-y-7 border-l border-sidebar-border pl-5" aria-label="Шаги">
         <li
           v-for="(label, i) in steps"

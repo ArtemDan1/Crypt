@@ -62,6 +62,7 @@ async function act(s: SnapshotInfo, action: 'restore' | 'delete') {
       await lib.changed()
       const parts = [`возвращено записей: ${r.restored}`]
       if (r.trashed) parts.push(`новые в корзине: ${r.trashed}`)
+      if (r.removed) parts.push(`удалено импортированных секретов: ${r.removed}`)
       if (r.missing) parts.push(`стёрты навсегда и не вернутся: ${r.missing}`)
       toast(`Хранилище откачено к «${s.name}»`, { description: parts.join(' · ') })
     })
@@ -78,8 +79,9 @@ const isConfirming = (s: SnapshotInfo, action: 'restore' | 'delete') =>
         <div class="flex-1">
           <div class="font-medium">Снимки хранилища</div>
           <div class="text-muted-foreground text-xs">
-            Точка, к которой можно откатить все записи. Откат добавляет версии, а записи, созданные позже, кладёт в
-            корзину. Секреты, типы и папки не откатываются.
+            Точка, к которой можно откатить все записи. Откат добавляет версии, а заметки, созданные позже, кладёт в
+            корзину. Импортированные позже секреты, которые вы не меняли, удаляются; созданные вручную остаются.
+            Значения секретов, типы и папки не откатываются.
           </div>
         </div>
       </div>

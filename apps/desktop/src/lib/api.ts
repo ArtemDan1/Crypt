@@ -117,6 +117,8 @@ export const api = {
   unlockPin: (pin: string) => call<VaultStatus>('unlock_pin', { pin }),
   revealSeed: (pin?: string) => call<string[]>('reveal_seed', { pin: pin ?? null }),
   // library
+  vaultName: () => call<string>('vault_name'),
+  renameVault: (name: string) => call<void>('rename_vault', { name }),
   listTypes: () => call<TypeDef[]>('list_types'),
   putType: (t: TypeDef) => call<void>('put_type', { t }),
   deleteType: (id: Id) => call<void>('delete_type', { id }),
@@ -141,6 +143,8 @@ export const api = {
   removeTag: (id: Id, tag: string) => call<void>('remove_tag', { id, tag }),
   setField: (id: Id, field: Id, value: FieldValue | null) => call<void>('set_field', { id, field, value }),
   deleteRecord: (id: Id) => call<void>('delete_record', { id }),
+  /** Notes go to trash, secrets are purged. Returns [trashed, purged]. */
+  deleteRecords: (ids: Id[]) => call<[number, number]>('delete_records', { ids }),
   restoreRecord: (id: Id) => call<void>('restore_record', { id }),
   purgeRecord: (id: Id) => call<void>('purge_record', { id }),
   emptyTrash: () => call<number>('empty_trash'),

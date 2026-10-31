@@ -35,6 +35,7 @@ interface Db {
   folders: Folder[]
   views: ViewDef[]
   records: RecordView[]
+  name?: string
 }
 
 const ulid = () => {
@@ -188,6 +189,7 @@ const summary = (r: RecordView) => ({
   folder: r.folder,
   tags: r.tags,
   secret_kind: r.secret_kind,
+  username: (r.secret_kind === 'login' && secretValues.get(r.id)?.username) || null,
   updated_at: r.updated_at,
 })
 const linksOf = (r: RecordView) => {
@@ -629,7 +631,7 @@ const historyHandlers: Record<string, (a: any) => unknown> = {
   restore_snapshot: ({ id }) => {
     need()
     const s = snapshots.find((x) => x.id === id) ?? err('NotFound', 'Снимок не найден')
-    const report = { restored: 0, trashed: 0, missing: 0 }
+    const report = { restored: 0, trashed: 0, missing: 0, removed: 0 }
     for (const [rid, e] of s.records) {
       const r = db.records.find((x) => x.id === rid)
       if (!r) {
@@ -652,6 +654,12 @@ const historyHandlers: Record<string, (a: any) => unknown> = {
         r.deleted_at = now()
         report.trashed++
       }
+    const imported = db.records.filter(
+      (r) => !s.records.has(r.id) && r.secret_kind && versions.get(r.id)?.every((v) => v.kind === 'import'),
+    )
+    for (const r of imported) wipeSecrets(r.id)
+    db.records = db.records.filter((r) => !imported.includes(r))
+    report.removed = imported.length
     return report
   },
 }
@@ -764,6 +772,15 @@ const handlers: Record<string, (a: any) => unknown> = {
   },
   reveal_seed: () => [...WORDS],
   flush_done: () => {},
+  vault_name: () => {
+    need()
+    return db.name?.trim() || 'Личное'
+  },
+  rename_vault: ({ name }: { name: string }) => {
+    need()
+    if (!name.trim()) err('Validation', 'Название хранилища не может быть пустым')
+    db.name = name.trim()
+  },
   list_types: () => {
     need()
     return [...db.types].sort((a, b) => a.name.localeCompare(b.name, 'ru'))
@@ -911,6 +928,23 @@ const handlers: Record<string, (a: any) => unknown> = {
       r.deleted_at = now()
       touch(r)
     }
+  },
+  delete_records: ({ ids }: { ids: string[] }) => {
+    let trashed = 0,
+      purged = 0
+    for (const id of ids) {
+      const r = rec(id)
+      if (r.secret_kind) {
+        wipeSecrets(id)
+        db.records = db.records.filter((x) => x.id !== id)
+        purged++
+      } else if (!r.deleted_at) {
+        r.deleted_at = now()
+        touch(r)
+        trashed++
+      }
+    }
+    return [trashed, purged]
   },
   restore_record: ({ id }) => {
     const r = rec(id)

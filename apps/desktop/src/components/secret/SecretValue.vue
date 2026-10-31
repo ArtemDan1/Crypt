@@ -82,6 +82,8 @@ const strength = computed(() => {
   const v = editing.value ? draft.value : revealed.value
   return v ? passwordStrength(v) : null
 })
+// Never let the generator overwrite an existing value: the field has to be cleared first.
+const hasValue = computed(() => (editing.value ? draft.value.length > 0 : !empty.value))
 const strengthTone = ['bg-destructive', 'bg-secret', 'bg-primary', 'bg-primary']
 // Sensitive and multiline drafts are saved explicitly; plain values save on blur.
 const explicit = computed(() => props.meta.sensitive || props.meta.multiline)
@@ -160,7 +162,7 @@ async function generated(value: string) {
           v-model="draft"
           rows="4"
           :aria-label="meta.label"
-          class="-mx-2 min-w-0 flex-1 rounded-md bg-transparent px-2 py-1.5 text-sm outline-none ring-1 ring-primary/60"
+          class="min-w-0 flex-1 rounded-lg bg-transparent px-2.5 py-1.5 text-sm outline-none ring-1 ring-primary/60 ring-inset"
           :class="meta.mono ? 'font-mono' : ''"
           @keydown.esc.prevent="cancel"
           @keydown.meta.enter.prevent="save"
@@ -172,7 +174,7 @@ async function generated(value: string) {
           :type="meta.sensitive && !visible ? 'password' : 'text'"
           :aria-label="meta.label"
           :placeholder="meta.sensitive && filled ? 'Новое значение' : 'не задано'"
-          class="-mx-2 h-9 min-w-0 flex-1 rounded-md bg-transparent px-2 text-sm outline-none ring-1 ring-primary/60 placeholder:font-sans"
+          class="h-9 min-w-0 flex-1 rounded-lg bg-transparent px-2.5 text-sm outline-none ring-1 ring-primary/60 ring-inset placeholder:font-sans"
           :class="meta.mono || meta.sensitive ? 'font-mono' : ''"
           autocomplete="off"
           @keydown.enter.prevent="save"
@@ -202,7 +204,7 @@ async function generated(value: string) {
             empty ? 'text-muted-foreground' : meta.mono || meta.sensitive ? 'font-mono' : '',
             meta.sensitive && !empty
               ? 'bg-secret-bg text-secret-fg hover:brightness-[.97]'
-              : '-mx-2 hover:bg-foreground/[.05]',
+              : 'hover:bg-foreground/[.05]',
           ]"
           @click="edit"
         >
@@ -239,7 +241,7 @@ async function generated(value: string) {
           ><Copy class="size-4"
         /></Button>
       </template>
-      <PasswordGenerator v-if="meta.generator && !readOnly" @use="generated" />
+      <PasswordGenerator v-if="meta.generator && !readOnly" :disabled="hasValue" @use="generated" />
     </div>
     <div v-if="strength" class="mt-1.5 flex items-center gap-2">
       <span class="bg-muted h-1 w-28 overflow-hidden rounded-full"

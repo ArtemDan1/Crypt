@@ -39,6 +39,9 @@ pub struct RecordSummary {
     pub folder: Option<FolderId>,
     pub tags: Vec<String>,
     pub secret_kind: Option<SecretKind>,
+    /// Login username (a public secret value), shown in lists and searchable.
+    #[serde(default)]
+    pub username: Option<String>,
     pub updated_at: i64,
 }
 #[derive(Clone, Debug, Default, Deserialize)]
@@ -343,6 +346,10 @@ impl RecordDoc {
             folder: self.folder(),
             tags: self.tags(),
             secret_kind: self.secret_kind(),
+            username: (self.secret_kind() == Some(SecretKind::Login))
+                .then(|| json_string(&self.doc.get_map("secret"), "username"))
+                .flatten()
+                .filter(|s| !s.is_empty()),
             updated_at: self.updated_at(),
         }
     }

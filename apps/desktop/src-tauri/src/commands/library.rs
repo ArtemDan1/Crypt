@@ -24,12 +24,14 @@ macro_rules! cmd {
         #[tauri::command]
         pub async fn $name(st: State<'_, std::sync::Arc<AppState>>, $($arg: $ty),*) -> ApiResult<$ret> {
             let result=with_vault(&st, |$v| $body);
-            if result.is_ok() && matches!(stringify!($name),"set_title"|"delete_record"|"purge_record"|"revert_record"|"restore_snapshot") {crate::agent::cache::refresh(&st);}
+            if result.is_ok() && matches!(stringify!($name),"set_title"|"delete_record"|"delete_records"|"purge_record"|"revert_record"|"restore_snapshot") {crate::agent::cache::refresh(&st);}
             result
         }
     };
 }
 
+cmd!(vault_name() -> String => |v| Ok(v.name()));
+cmd!(rename_vault(name: String) -> () => |v| v.rename(&name));
 cmd!(list_types() -> Vec<TypeDef> => |v| Ok(v.types()));
 cmd!(put_type(t: TypeDef) -> () => |v| v.put_type(t));
 cmd!(delete_type(id: TypeId) -> () => |v| v.delete_type(&id));
@@ -52,6 +54,7 @@ cmd!(add_tag(id: RecordId, tag: String) -> () => |v| v.add_tag(&id, &tag));
 cmd!(remove_tag(id: RecordId, tag: String) -> () => |v| v.remove_tag(&id, &tag));
 cmd!(set_field(id: RecordId, field: FieldId, value: Option<FieldValue>) -> () => |v| v.set_field(&id, &field, value));
 cmd!(delete_record(id: RecordId) -> () => |v| v.delete(&id));
+cmd!(delete_records(ids: Vec<RecordId>) -> (usize, usize) => |v| v.delete_many(&ids));
 cmd!(restore_record(id: RecordId) -> () => |v| v.restore(&id));
 cmd!(purge_record(id: RecordId) -> () => |v| v.purge(&id));
 cmd!(empty_trash() -> usize => |v| v.empty_trash());

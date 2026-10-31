@@ -4,11 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { Clock, FolderRoot, KeyRound, Lock, Plus, Search, SlidersHorizontal, Trash2 } from '@lucide/vue'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import FolderTree from '@/components/FolderTree.vue'
-import CryptMark from '@/components/crypt/CryptMark.vue'
 import KindTile from '@/components/crypt/KindTile.vue'
 import { toneForType } from '@/lib/tones'
 import AutolockRing from '@/components/crypt/AutolockRing.vue'
 import { api } from '@/lib/api'
+import { toast } from 'vue-sonner'
 import { typeIcon } from '@/lib/icons'
 import { useLibrary } from '@/stores/library'
 import { useSession } from '@/stores/session'
@@ -34,6 +34,27 @@ const plural = (n: number) => {
   if (m10 === 1 && m100 !== 11) return 'запись'
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'записи'
   return 'записей'
+}
+// Vault name: click to rename in place (Enter saves, Esc cancels).
+const renaming = ref(false)
+const nameDraft = ref('')
+const nameInput = ref<HTMLInputElement | null>(null)
+async function startRename() {
+  nameDraft.value = lib.name
+  renaming.value = true
+  await nextTick()
+  nameInput.value?.select()
+}
+async function commitRename() {
+  if (!renaming.value) return
+  renaming.value = false
+  const next = nameDraft.value.trim()
+  if (!next || next === lib.name) return
+  try {
+    await lib.rename(next)
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'Не удалось переименовать хранилище')
+  }
 }
 const row = (active: boolean) =>
   active ? 'bg-sidebar-accent text-foreground font-semibold' : 'text-foreground hover:bg-foreground/[.06] font-medium'
@@ -71,9 +92,27 @@ defineExpose({ newFolder })
     </div>
     <div class="flex flex-col gap-2.5 px-2.5 pb-3">
       <div class="flex items-center gap-2.5 px-1.5">
-        <CryptMark :size="30" decorative />
-        <div class="flex-1 leading-tight">
-          <div class="text-[14px] font-semibold">Личное</div>
+        <div class="min-w-0 flex-1 leading-tight">
+          <input
+            v-if="renaming"
+            ref="nameInput"
+            v-model="nameDraft"
+            aria-label="Название хранилища"
+            maxlength="60"
+            class="bg-card ring-primary/60 -mx-1 w-[calc(100%+.5rem)] rounded-md px-1 text-[14px] font-semibold outline-none ring-1"
+            @keydown.enter.prevent="commitRename"
+            @keydown.esc.prevent="renaming = false"
+            @blur="commitRename"
+          />
+          <button
+            v-else
+            type="button"
+            class="hover:bg-foreground/[.06] -mx-1 block max-w-[calc(100%+.5rem)] truncate rounded-md px-1 text-left text-[14px] font-semibold transition-colors"
+            title="Переименовать хранилище"
+            @click="startRename"
+          >
+            {{ lib.name || 'Личное' }}
+          </button>
           <div class="text-muted-foreground text-xs">{{ total }} {{ plural(total) }}</div>
         </div>
         <button

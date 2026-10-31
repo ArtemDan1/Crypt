@@ -65,6 +65,18 @@ impl MetaDoc {
         self.doc.get_map(map).delete(key).expect("attached map");
         self.doc.commit();
     }
+    /// User-facing vault name; `None` until the user renames it.
+    pub fn vault_name(&self) -> Option<String> {
+        json_string(&self.doc.get_map("vault"), "name")
+    }
+    pub fn set_vault_name(&mut self, name: &str) -> Result<()> {
+        self.doc
+            .get_map("vault")
+            .insert("name", name)
+            .map_err(crdt)?;
+        self.doc.commit();
+        Ok(())
+    }
     pub fn list_types(&self) -> Vec<TypeDef> {
         let mut out = values::<TypeDef>(&self.doc.get_map("types")).expect("validated metadata");
         out.sort_by(|a, b| a.name.cmp(&b.name));
@@ -188,6 +200,9 @@ pub struct SnapshotRestoreReport {
     pub trashed: usize,
     /// Records in the snapshot that were purged since.
     pub missing: usize,
+    /// Secrets imported after the snapshot and never edited, removed for good.
+    #[serde(default)]
+    pub removed: usize,
 }
 impl Snapshot {
     pub fn info(&self) -> SnapshotInfo {
