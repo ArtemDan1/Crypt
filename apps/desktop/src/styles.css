@@ -336,3 +336,14 @@
     animation-iteration-count: 1 !important;
   }
 }
+@keyframes crypt-fresh {
+  from {
+    background-color: color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.anim-fresh {
+  animation: crypt-fresh 0.9s ease-out both;
+}
