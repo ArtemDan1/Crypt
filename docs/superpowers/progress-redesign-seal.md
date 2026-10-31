@@ -49,3 +49,5 @@ Task 2: Ruling: backup/import — системное подтверждение 
 Task 2: backup/import automated complete — export presence/file/settings tests RED→GREEN; backupReminder RED→GREEN; vitest 65/65, build, prettier --check src, cargo test PASS. Markdown export remains in TransferSection until Task 7 moves its import forms.
 Task 3: Ruling: backup/import — реальный цикл через tauri dev и удаление пользовательской базы не выполнялся — нет GUI-инструмента, а удалять текущую базу для теста недопустимо; цикл покрыт изолированными Rust-тестами — цена ошибки: системный диалог и drag-and-drop требуют ручного smoke-теста.
 Task 3: automated complete — 3 restore tests RED→GREEN, cargo test PASS, vitest 65/65, build, prettier --check src PASS; native smoke pending.
+Task 4: Ruling: backup/import — вместо cargo test -p crypt-core import_csv import_apply используется фильтр import_ — cargo принимает только один позиционный фильтр; он охватывает оба модуля — цена ошибки: дополнительно запускаются другие import-тесты.
+Task 4: backup/import complete — CSV/import_apply 5 tests RED→GREEN; cargo test PASS, vitest 65/65, build, prettier --check src PASS.
