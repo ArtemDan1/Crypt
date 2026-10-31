@@ -6,3 +6,5 @@ pub mod secrets;
 
 pub mod ssh_import;
 pub mod transfer;
+
+pub mod backup;

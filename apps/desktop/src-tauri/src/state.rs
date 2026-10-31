@@ -12,6 +12,7 @@ pub struct Settings {
     pub agent_enabled: bool,
     pub agent_trust_minutes: u32,
     pub launch_at_login: bool,
+    pub last_backup_at: Option<i64>,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -21,6 +22,7 @@ impl Default for Settings {
             agent_enabled: true,
             agent_trust_minutes: 0,
             launch_at_login: false,
+            last_backup_at: None,
         }
     }
 }

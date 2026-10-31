@@ -11,6 +11,7 @@
     "core:event:default",
     "opener:allow-reveal-item-in-dir",
     "autostart:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }

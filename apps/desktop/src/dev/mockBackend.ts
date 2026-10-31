@@ -84,6 +84,7 @@ function seedDb(): Db {
       agentEnabled: true,
       agentTrustMinutes: 0,
       launchAtLogin: false,
+      lastBackupAt: null,
     },
     types: [service],
     folders: [],
@@ -381,6 +382,11 @@ const mockCandidates: SshCandidate[] = [
 ]
 let sshConfigured = false
 const secretHandlers: Record<string, (a: any) => unknown> = {
+  export_backup: ({ path }) => {
+    const now = Date.now()
+    db.settings.lastBackupAt = now
+    return { path, bytes: 24576, header: { version: 1, created_at: now, objects: 12 } }
+  },
   recent_secrets: () => [],
   tray_hide: () => {},
   app_quit: () => {},

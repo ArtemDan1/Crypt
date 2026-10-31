@@ -11,6 +11,7 @@ export interface UnlockMethods {
 }
 
 export interface Settings {
+  lastBackupAt: number | null
   autolockMinutes: number
   clipboardClearSeconds: number
   agentEnabled: boolean
@@ -246,4 +247,15 @@ export interface ExportReport {
   path: string
   notes: number
   secrets: number
+}
+
+export interface BackupHeader {
+  version: number
+  created_at: number
+  objects: number
+}
+export interface BackupExport {
+  path: string
+  bytes: number
+  header: BackupHeader
 }

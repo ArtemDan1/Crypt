@@ -21,6 +21,7 @@ import SegmentedControl from '@/components/crypt/SegmentedControl.vue'
 import { getThemePref, setThemePref, type ThemePref } from '@/lib/theme'
 import { useRoute } from 'vue-router'
 import SnapshotsSection from '@/components/SnapshotsSection.vue'
+import BackupCard from '@/components/BackupCard.vue'
 import TransferSection from '@/components/TransferSection.vue'
 import { api, CryptApiError } from '@/lib/api'
 import type { UnlockMethods, Settings as SettingsDTO, AgentStatus, SshConfigStatus } from '@/lib/types'
@@ -470,6 +471,7 @@ async function copyExport() {
           Скроется через {{ seedLeft }} с
         </div>
 
+        <BackupCard v-if="section === 'vault'" />
         <TransferSection v-if="section === 'vault'" @imported="snapshotsKey++" />
         <SnapshotsSection v-if="section === 'vault'" :key="snapshotsKey" />
 

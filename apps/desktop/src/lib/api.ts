@@ -55,6 +55,8 @@ export async function call<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const api = {
+  exportBackup: (path: string, pin?: string) =>
+    call<import('./types').BackupExport>('export_backup', { path, pin: pin || null }),
   recentSecrets: (limit = 6) => call<Id[]>('recent_secrets', { limit }),
   trayHide: () => call<void>('tray_hide'),
   appQuit: () => call<void>('app_quit'),
