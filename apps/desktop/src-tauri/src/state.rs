@@ -42,6 +42,8 @@ impl Settings {
 }
 
 pub struct AppState {
+    pub pending_otp: Mutex<Option<crate::commands::transfer::PendingOtp>>,
+    pub otp_generation: std::sync::atomic::AtomicU64,
     pub recent: crate::recent::RecentSecrets,
     pub app: Mutex<Option<tauri::AppHandle>>,
     pub agent: crate::agent::server::AgentHandle,
@@ -67,6 +69,8 @@ impl AppState {
     ) -> Self {
         let settings = Settings::load(&settings_path);
         Self {
+            pending_otp: Mutex::new(None),
+            otp_generation: std::sync::atomic::AtomicU64::new(0),
             recent: Default::default(),
             app: Mutex::new(None),
             agent: Default::default(),

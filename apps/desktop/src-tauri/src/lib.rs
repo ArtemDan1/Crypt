@@ -56,6 +56,12 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::transfer::preview_browser_csv,
+            commands::transfer::import_browser_csv,
+            commands::transfer::preview_otp,
+            commands::transfer::import_otp,
+            commands::transfer::cancel_otp_import,
+            commands::transfer::trash_file,
             commands::backup::export_backup,
             commands::backup::inspect_backup,
             commands::backup::restore_backup,

@@ -79,6 +79,7 @@ pub fn lock(st: &AppState) -> VaultStatus {
         let mut guard = st.vault_guard();
         if let Some(v) = guard.take() { v.lock(); }
         st.recent.clear();
+        crate::commands::transfer::cancel_pending(st);
     }
     let status = status(st);
     st.emit("vault-locked", status.clone());

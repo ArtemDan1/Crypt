@@ -382,6 +382,38 @@ const mockCandidates: SshCandidate[] = [
 ]
 let sshConfigured = false
 const secretHandlers: Record<string, (a: any) => unknown> = {
+  preview_browser_csv: () => ({
+    format: 'chromium',
+    new: 2,
+    duplicates: 1,
+    skipped: 1,
+    sample: [
+      ['GitHub', 'alice'],
+      ['Mail', 'bob'],
+    ],
+  }),
+  import_browser_csv: () => ({
+    report: { imported: 2, duplicates: 1, skipped: [[5, 'NoPassword']] },
+    snapshot: 'Перед импортом браузера',
+  }),
+  preview_otp: ({ source }) => {
+    if (source.kind === 'aegis' && !source.password) throw { code: 'NeedsPassword', message: 'Введите пароль экспорта' }
+    return {
+      token: 'demo-otp',
+      rows: [
+        { issuer: 'GitHub', account: 'alice', target: { attach: 'GitHub' } },
+        { issuer: 'Mail', account: 'bob', target: 'new' },
+      ],
+      skipped: [['Старый аккаунт', 'Hotp']],
+      missingBatches: [],
+    }
+  },
+  import_otp: () => ({
+    report: { attached: 1, created: 1, skipped: [['Старый аккаунт', 'Hotp']], missing_batches: [] },
+    snapshot: 'Перед импортом 2FA',
+  }),
+  cancel_otp_import: () => {},
+  trash_file: () => {},
   inspect_backup: () => ({ version: 1, created_at: Date.now() - 86400000, objects: 12 }),
   restore_backup: () => {
     db.exists = true

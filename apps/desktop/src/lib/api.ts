@@ -55,6 +55,14 @@ export async function call<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const api = {
+  previewBrowserCsv: (path: string) => call<import('./types').BrowserPreview>('preview_browser_csv', { path }),
+  importBrowserCsv: (path: string, folder: string) =>
+    call<Imported<import('./types').LoginImportReport>>('import_browser_csv', { path, folder }),
+  previewOtp: (source: import('./types').OtpSource) => call<import('./types').OtpPreview>('preview_otp', { source }),
+  importOtp: (token: string, folder: string) =>
+    call<Imported<import('./types').OtpImportReport>>('import_otp', { token, folder }),
+  cancelOtpImport: () => call<void>('cancel_otp_import'),
+  trashFile: (path: string) => call<void>('trash_file', { path }),
   inspectBackup: (path: string) => call<import('./types').BackupHeader>('inspect_backup', { path }),
   restoreBackup: (path: string, words: string[]) => call<VaultStatus>('restore_backup', { path, words }),
   exportBackup: (path: string, pin?: string) =>

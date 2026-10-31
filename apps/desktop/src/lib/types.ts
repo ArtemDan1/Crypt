@@ -259,3 +259,35 @@ export interface BackupExport {
   bytes: number
   header: BackupHeader
 }
+
+export type OtpSkip = 'Hotp' | 'BadSecret' | 'Unsupported'
+export type CsvSkip = 'NoPassword' | 'BadRow' | 'BadTotp'
+export type OtpSource =
+  | { kind: 'images'; paths: string[] }
+  | { kind: 'clipboardImage' }
+  | { kind: 'aegis'; path: string; password?: string }
+  | { kind: 'twofas'; path: string }
+export interface BrowserPreview {
+  format: 'chromium' | 'safari' | 'firefox'
+  new: number
+  duplicates: number
+  skipped: number
+  sample: [string, string][]
+}
+export interface LoginImportReport {
+  imported: number
+  duplicates: number
+  skipped: [number, CsvSkip][]
+}
+export interface OtpPreview {
+  token: string
+  rows: { issuer: string; account: string; target: { attach: string } | 'new' }[]
+  skipped: [string, OtpSkip][]
+  missingBatches: [number, number][]
+}
+export interface OtpImportReport {
+  attached: number
+  created: number
+  skipped: [string, OtpSkip][]
+  missing_batches: [number, number][]
+}
