@@ -5,6 +5,7 @@ import { toast } from 'vue-sonner'
 import SecretValue from './SecretValue.vue'
 import SshKeySection from './SshKeySection.vue'
 import TotpCode from './TotpCode.vue'
+import CardFace from './CardFace.vue'
 import { api } from '@/lib/api'
 import type { SecretOverview } from '@/lib/types'
 import { SECRET_FIELDS, SECRET_KIND_LABEL } from '@/lib/secretFields'
@@ -49,10 +50,17 @@ onBeforeUnmount(() => {
 })
 </script>
 <template>
-  <section v-if="overview" class="my-5 rounded-xl border bg-card p-5">
-    <h2 class="mb-3 flex items-center gap-2 text-sm font-medium">
-      <KeyRound class="size-4 text-secret" />{{ SECRET_KIND_LABEL[overview.kind] }}
+  <section v-if="overview" class="bg-card my-5 rounded-xl border p-5">
+    <h2 class="text-muted-foreground mb-3 flex items-center gap-2 text-xs font-semibold tracking-wider uppercase">
+      <KeyRound class="text-secret size-3.5" />{{ SECRET_KIND_LABEL[overview.kind] }}
     </h2>
+    <CardFace
+      v-if="overview.kind === 'card'"
+      :record-id="recordId"
+      :filled="overview.filled.includes('number')"
+      :holder="overview.public.holder"
+      :expiry="overview.public.expiry"
+    />
     <SshKeySection
       v-if="overview.kind === 'sshkey'"
       :record-id="recordId"
@@ -69,6 +77,6 @@ onBeforeUnmount(() => {
       :history-count="overview.historyCounts[meta.name] ?? 0"
       :read-only="meta.name === 'private_key'"
       @saved="saved"
-    /><TotpCode v-if="overview.hasTotp" :record-id="recordId" />
+    /><TotpCode v-if="overview.hasTotp" :record-id="recordId" class="mt-3" />
   </section>
 </template>

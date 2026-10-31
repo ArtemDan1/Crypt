@@ -112,7 +112,6 @@ const classes = [
         /></label>
       </div>
       <label class="flex items-center justify-between text-xs"
-        >Без похожих 0O1lI<Switch v-model="options.avoidAmbiguous"
-      /></label></PopoverContent
+        >Без похожих 0O1lI<Switch v-model="options.avoidAmbiguous" /></label></PopoverContent
   ></Popover>
 </template>
