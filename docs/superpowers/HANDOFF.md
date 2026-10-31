@@ -5,7 +5,7 @@
 ## Что читать сначала
 1. Спецификации: `docs/superpowers/specs/2026-10-31-redesign-seal-design.md`, `docs/superpowers/specs/2026-10-31-backup-import-design.md`.
 2. Планы: `docs/superpowers/plans/2026-10-31-redesign-seal.md` (выполняется сейчас), затем `docs/superpowers/plans/2026-10-31-backup-import.md`.
-3. Журнал прогресса и принятых решений: `.superpowers/sdd/2026-10-31-redesign-seal/progress.md` (не в git). Строки `Ruling:` — решения, которые уже приняты; не переигрывать.
+3. Журнал прогресса и принятых решений: `.superpowers/sdd/2026-10-31-redesign-seal/progress.md` (не в git; копия на момент передачи — `docs/superpowers/progress-redesign-seal.md`). Строки `Ruling:` — решения, которые уже приняты; не переигрывать.
 4. Макеты (HTML с данными, тексты и цвета): https://claude.ai/artifact/PCSwUujPE9RMxKYTJeKVua — если недоступны, ориентироваться на спецификацию и уже сделанные экраны.
 
 ## Состояние
