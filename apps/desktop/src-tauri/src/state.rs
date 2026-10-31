@@ -58,7 +58,8 @@ pub struct AppState {
     pub keys: Box<dyn KeyStore>,
     pub auth: Box<dyn Authenticator>,
     /// Set while a graceful lock waits for the frontend to flush pending saves.
-    pub flush_waiter: Mutex<Option<mpsc::Sender<()>>>,
+    pub flush_waiter: Mutex<Option<(String, mpsc::Sender<()>)>>,
+    pub lock_requests: Mutex<()>,
 }
 impl AppState {
     pub fn new(
@@ -88,6 +89,7 @@ impl AppState {
             keys,
             auth,
             flush_waiter: Mutex::new(None),
+            lock_requests: Mutex::new(()),
         }
     }
     pub fn unlocker(&self) -> Unlocker<'_> {

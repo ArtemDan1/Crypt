@@ -384,6 +384,7 @@ let sshConfigured = false
 const secretHandlers: Record<string, (a: any) => unknown> = {
   preview_browser_csv: () => ({
     format: 'chromium',
+    skippedDetails: [[5, 'NoPassword']],
     new: 2,
     duplicates: 1,
     skipped: 1,
@@ -414,7 +415,7 @@ const secretHandlers: Record<string, (a: any) => unknown> = {
   }),
   cancel_otp_import: () => {},
   trash_file: () => {},
-  inspect_backup: () => ({ version: 1, created_at: Date.now() - 86400000, objects: 12 }),
+  inspect_backup: () => ({ version: 1, created_at: Date.now() - 86400000, objects: 12, bytes: 24576 }),
   restore_backup: () => {
     db.exists = true
     db.unlocked = true

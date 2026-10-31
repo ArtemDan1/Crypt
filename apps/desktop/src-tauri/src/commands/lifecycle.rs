@@ -249,8 +249,8 @@ pub mod cmd {
         super::unlock_with_seed(&st, words)
     }
     #[tauri::command]
-    pub fn lock(st: State<'_, std::sync::Arc<AppState>>) -> VaultStatus {
-        super::lock(&st)
+    pub async fn lock(app: tauri::AppHandle) -> ApiResult<VaultStatus> {
+        tauri::async_runtime::spawn_blocking(move || crate::autolock::lock_with_flush(&app)).await.map_err(|_|ApiError::new("Internal","Внутренняя ошибка"))
     }
     #[tauri::command]
     pub fn vault_path(st: State<'_, std::sync::Arc<AppState>>) -> String {

@@ -1,5 +1,11 @@
 import { beforeEach, expect, test } from 'vitest'
-import { GENERATOR_PROFILES, activeProfile, loadGeneratorOptions, saveGeneratorOptions } from '@/lib/generatorProfiles'
+import {
+  GENERATOR_PROFILES,
+  applyGeneratorProfile,
+  activeProfile,
+  loadGeneratorOptions,
+  saveGeneratorOptions,
+} from '@/lib/generatorProfiles'
 
 beforeEach(() => localStorage.clear())
 
@@ -22,4 +28,13 @@ test('saved options are read back', () => {
   const o = loadGeneratorOptions()
   expect(o.mode).toBe('words')
   expect(o.words).toBe(7)
+})
+
+test('named PIN profile resets overrides and custom overrides are not called a PIN profile', () => {
+  const pin = applyGeneratorProfile('pin6')
+  expect(pin.include).toBe('')
+  expect(pin.exclude).toBe('')
+  expect(pin.digits).toBe(true)
+  expect(pin.lower || pin.upper || pin.symbols || pin.latin1 || pin.space).toBe(false)
+  expect(activeProfile({ ...pin, include: '€' })).toBeNull()
 })

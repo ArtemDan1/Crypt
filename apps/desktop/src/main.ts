@@ -31,6 +31,9 @@ async function boot() {
   await session.refresh().catch(() => {})
   app.use(router).mount('#app')
 
+  await listen<{ left: number | null; total: number | null }>('session-countdown', (e) =>
+    session.applyCountdown(e.payload),
+  ).catch(() => {})
   await listen('session-activity', () => session.activity()).catch(() => {})
   await listen('vault-unlocked', async () => {
     await session.refresh()
@@ -38,10 +41,12 @@ async function boot() {
   }).catch(() => {})
 
   // Sleep / screen lock: Rust asks us to save pending edits, then drops the key.
-  await listen('vault-will-lock', async () => {
-    await session.flushAll()
-    await api.flushDone().catch(() => {})
-  }).catch(() => {})
+  if (window.location.hash !== '#/tray') {
+    await listen<string>('vault-will-lock', async (e) => {
+      await session.flushAll()
+      await api.flushDone(e.payload).catch(() => {})
+    }).catch(() => {})
+  }
   await listen<VaultStatus>('vault-locked', (e) => {
     if (e.payload.state === 'locked') session.markLocked(e.payload.vaultId)
   }).catch(() => {})

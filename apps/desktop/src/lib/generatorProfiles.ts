@@ -61,7 +61,13 @@ export const GENERATOR_PROFILES: { id: ProfileId; label: string; options: Partia
   { id: 'phrase5', label: 'Фраза 5 слов', options: { mode: 'words', words: 5, separator: '-', capitalize: true } },
 ]
 
+export function applyGeneratorProfile(id: ProfileId): GenOptions {
+  const profile = GENERATOR_PROFILES.find((p) => p.id === id)!
+  return { ...DEFAULT_GENERATOR, ...profile.options }
+}
+
 export function activeProfile(o: GenOptions): ProfileId | null {
+  if (o.mode === 'chars' && (o.include || o.exclude)) return null
   const hit = GENERATOR_PROFILES.find((p) =>
     (Object.keys(p.options) as (keyof GenOptions)[]).every((k) => o[k] === p.options[k]),
   )

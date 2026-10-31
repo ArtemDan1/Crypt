@@ -268,6 +268,7 @@ export type OtpSource =
   | { kind: 'aegis'; path: string; password?: string }
   | { kind: 'twofas'; path: string }
 export interface BrowserPreview {
+  skippedDetails: [number, CsvSkip][]
   format: 'chromium' | 'safari' | 'firefox'
   new: number
   duplicates: number
@@ -290,4 +291,8 @@ export interface OtpImportReport {
   created: number
   skipped: [string, OtpSkip][]
   missing_batches: [number, number][]
+}
+
+export interface BackupInspection extends BackupHeader {
+  bytes: number
 }

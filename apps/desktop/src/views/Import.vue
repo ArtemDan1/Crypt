@@ -80,6 +80,10 @@ const reasons: Record<string, string> = {
 async function load(files: string[]) {
   if (busy.value || !selected.value || !files.length) return
   const source = selected.value
+  if (source.id !== 'ga' && files.length !== 1) {
+    error.value = 'Выберите один файл для этого источника'
+    return
+  }
   const seq = ++request
   paths.value = files
   busy.value = true
@@ -344,6 +348,9 @@ onBeforeUnmount(() => {
               }}</span>
             </div>
           </div>
+          <ul v-if="csv?.skippedDetails?.length" class="space-y-1 text-sm text-muted-foreground">
+            <li v-for="([line, reason], i) in csv.skippedDetails" :key="i">Строка {{ line }}: {{ reasons[reason] }}</li>
+          </ul>
           <ul v-if="otp" class="space-y-1 text-sm text-muted-foreground">
             <li v-for="([name, reason], i) in otp.skipped" :key="i">{{ name }}: {{ reasons[reason] }}</li>
             <li v-for="([index, size], i) in otp.missingBatches" :key="`batch-${i}`" class="text-secret-fg">

@@ -10,6 +10,7 @@ import { api, CryptApiError } from '@/lib/api'
 import {
   GENERATOR_PROFILES,
   activeProfile,
+  applyGeneratorProfile,
   loadGeneratorOptions,
   saveGeneratorOptions,
   type GenOptions,
@@ -98,7 +99,7 @@ const chars = computed(() =>
 const profile = computed(() => activeProfile(o.value))
 
 function applyProfile(p: (typeof GENERATOR_PROFILES)[number]) {
-  o.value = { ...o.value, ...p.options }
+  o.value = applyGeneratorProfile(p.id)
 }
 async function copy(value: string, i: number | null = null) {
   try {

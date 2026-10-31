@@ -8,8 +8,18 @@ const mocks = vi.hoisted(() => ({
   cancelOtpImport: vi.fn(async () => {}),
   trashFile: vi.fn(async () => {}),
   hooks: [] as (() => void)[],
+  native: false,
+  drop: null as null | ((e: { payload: { type: string; paths: string[] } }) => void),
 }))
-vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => false }))
+vi.mock('@tauri-apps/api/core', () => ({ isTauri: () => mocks.native }))
+vi.mock('@tauri-apps/api/webview', () => ({
+  getCurrentWebview: () => ({
+    onDragDropEvent: async (fn: typeof mocks.drop) => {
+      mocks.drop = fn
+      return () => {}
+    },
+  }),
+}))
 vi.mock('@/stores/library', () => ({ useLibrary: () => ({ folders: [], changed: async () => {} }) }))
 vi.mock('@/stores/session', () => ({
   useSession: () => ({
@@ -37,6 +47,8 @@ const button = (w: ReturnType<typeof mountWizard>, text: string) =>
 beforeEach(() => {
   vi.clearAllMocks()
   mocks.hooks = []
+  mocks.native = false
+  mocks.drop = null
   mocks.previewBrowserCsv.mockResolvedValue({
     format: 'chromium',
     new: 1,
@@ -121,5 +133,41 @@ test('a new preview waits until cancellation of the previous one completes', asy
   release()
   await flushPromises()
   expect(mocks.previewBrowserCsv).toHaveBeenCalledOnce()
+  w.unmount()
+})
+
+test('dropping two CSVs rejects them and never trashes an unimported second file', async () => {
+  mocks.native = true
+  const w = mountWizard()
+  await flushPromises()
+  await button(w, 'Chrome').trigger('click')
+  mocks.drop!({ payload: { type: 'drop', paths: ['/a.csv', '/b.csv'] } })
+  await flushPromises()
+  expect(mocks.previewBrowserCsv).not.toHaveBeenCalled()
+  expect(w.text()).toContain('Выберите один файл')
+  mocks.drop!({ payload: { type: 'drop', paths: ['/a.csv'] } })
+  await flushPromises()
+  await button(w, 'Импортировать (1)').trigger('click')
+  await flushPromises()
+  await button(w, 'Переместить в корзину').trigger('click')
+  await flushPromises()
+  expect(mocks.trashFile.mock.calls).toEqual([['/a.csv']])
+  w.unmount()
+})
+test('all-skipped CSV previews explain every rejected row without an import', async () => {
+  mocks.previewBrowserCsv.mockResolvedValue({
+    format: 'chromium',
+    new: 0,
+    duplicates: 0,
+    skipped: 1,
+    sample: [],
+    skippedDetails: [[2, 'NoPassword']],
+  })
+  const w = mountWizard()
+  await button(w, 'Chrome').trigger('click')
+  await button(w, 'Выбрать файл').trigger('click')
+  await flushPromises()
+  expect(w.text()).toContain('Строка 2: Нет пароля')
+  expect(mocks.importBrowserCsv).not.toHaveBeenCalled()
   w.unmount()
 })

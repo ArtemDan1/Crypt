@@ -8,12 +8,12 @@ import CryptMark from '@/components/crypt/CryptMark.vue'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { api, CryptApiError } from '@/lib/api'
-import type { BackupHeader } from '@/lib/types'
+import type { BackupInspection } from '@/lib/types'
 import { useSession } from '@/stores/session'
 const router = useRouter(),
   session = useSession()
 const path = ref(''),
-  header = ref<BackupHeader | null>(null),
+  header = ref<BackupInspection | null>(null),
   text = ref(''),
   busy = ref(false),
   error = ref(''),
@@ -102,7 +102,8 @@ onBeforeUnmount(() => {
         <div v-if="header" class="mt-4 text-sm">
           <p class="truncate font-medium">{{ path.split('/').pop() }}</p>
           <p class="text-muted-foreground">
-            {{ new Date(header.created_at).toLocaleDateString('ru-RU') }} · объектов: {{ header.objects }}
+            {{ new Date(header.created_at).toLocaleDateString('ru-RU') }} · {{ (header.bytes / 1024).toFixed(1) }} КБ ·
+            объектов: {{ header.objects }}
           </p>
         </div>
       </div>
@@ -122,7 +123,7 @@ onBeforeUnmount(() => {
         <Button :disabled="words.length !== 24 || busy" type="submit">{{
           busy ? 'Проверяем и восстанавливаем…' : 'Восстановить'
         }}</Button
-        ><progress v-if="busy" aria-label="Восстановление" :value="0" max="1" class="block h-1 w-full accent-primary" />
+        ><progress v-if="busy" aria-label="Восстановление" max="1" class="block h-1 w-full accent-primary" />
       </form>
       <p v-if="error" role="alert" class="text-sm text-destructive">{{ error }}</p>
       <Button variant="ghost" :disabled="busy" @click="router.push('/onboarding')">Назад</Button>

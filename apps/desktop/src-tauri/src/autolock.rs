@@ -16,24 +16,54 @@ pub fn graceful_lock(st: &AppState, notify: impl FnOnce(), wait: &Receiver<()>, 
     lock(st);
 }
 
-/// System event (sleep, screen lock): lock with a flush round-trip to the UI.
+/// All UI/system locks ask the main editor to save, then drop the shared key.
+pub fn lock_with_flush(app: &AppHandle) -> VaultStatus {
+    let st = app.state::<std::sync::Arc<AppState>>();
+    let _serial = st.lock_requests.lock().unwrap_or_else(|e| e.into_inner());
+    let (tx, rx) = mpsc::channel();
+    let token = format!("{:032x}", rand::random::<u128>());
+    *st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner()) = Some((token.clone(), tx));
+    graceful_lock(
+        &st,
+        || {
+            let _ = app.emit_to("main", "vault-will-lock", token);
+        },
+        &rx,
+        FLUSH_TIMEOUT,
+    );
+    st.flush_waiter
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .take();
+    status(&st)
+}
 pub fn lock_from_system(app: &AppHandle) {
     let app = app.clone();
     std::thread::spawn(move || {
-        let st = app.state::<std::sync::Arc<AppState>>();
-        let (tx, rx) = mpsc::channel();
-        *st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner()) = Some(tx);
-        graceful_lock(&st, || { let _ = app.emit("vault-will-lock", ()); }, &rx, FLUSH_TIMEOUT);
-        st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner()).take();
-        let _ = app.emit("vault-locked", status(&st));
+        lock_with_flush(&app);
     });
 }
-
-#[tauri::command]
-pub fn flush_done(st: tauri::State<'_, std::sync::Arc<AppState>>) {
-    if let Some(tx) = st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner()).take() {
-        let _ = tx.send(());
+pub fn acknowledge_flush(st: &AppState, label: &str, token: &str) {
+    if label != "main" {
+        return;
     }
+    let mut waiter = st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner());
+    if waiter
+        .as_ref()
+        .is_some_and(|(expected, _)| expected == token)
+    {
+        if let Some((_, tx)) = waiter.take() {
+            let _ = tx.send(());
+        }
+    }
+}
+#[tauri::command]
+pub fn flush_done(
+    window: tauri::WebviewWindow,
+    st: tauri::State<'_, std::sync::Arc<AppState>>,
+    token: String,
+) {
+    acknowledge_flush(&st, window.label(), &token);
 }
 
 #[cfg(target_os = "macos")]
@@ -47,10 +77,16 @@ pub fn observe_system(app: &AppHandle) {
     let on_event = RcBlock::new(move |_n: NonNull<NSNotification>| lock_from_system(&a));
     unsafe {
         let ws = NSWorkspace::sharedWorkspace().notificationCenter();
-        let t1 = ws.addObserverForName_object_queue_usingBlock(Some(NSWorkspaceWillSleepNotification), None, None, &on_event);
+        let t1 = ws.addObserverForName_object_queue_usingBlock(
+            Some(NSWorkspaceWillSleepNotification),
+            None,
+            None,
+            &on_event,
+        );
         let dist = NSDistributedNotificationCenter::defaultCenter();
         let name = NSString::from_str("com.apple.screenIsLocked");
-        let t2 = dist.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &on_event);
+        let t2 =
+            dist.addObserverForName_object_queue_usingBlock(Some(&name), None, None, &on_event);
         // Observers live for the whole app run.
         std::mem::forget(t1);
         std::mem::forget(t2);
@@ -63,7 +99,7 @@ pub fn observe_system(_app: &AppHandle) {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::commands::lifecycle::{create_vault, generate_seed, status, VaultStatus};
+    use crate::commands::lifecycle::{VaultStatus, create_vault, generate_seed, status};
     use crate::state::AppState;
     use std::sync::mpsc;
     use std::time::{Duration, Instant};
@@ -107,5 +143,29 @@ mod tests {
         let mut notified = false;
         graceful_lock(&st, || notified = true, &rx, Duration::from_millis(50));
         assert!(!notified);
+    }
+}
+
+#[cfg(test)]
+mod acknowledgement_tests {
+    use super::*;
+    #[test]
+    fn tray_cannot_acknowledge_main_editor_flush() {
+        let d = tempfile::tempdir().unwrap();
+        let st = AppState::new(
+            d.path().join("vault"),
+            d.path().join("settings.json"),
+            Box::new(crate::unlock::keystore::MemoryKeyStore::default()),
+            Box::new(crate::unlock::authenticator::FakeAuthenticator::ok()),
+        );
+        let (tx, rx) = mpsc::channel();
+        *st.flush_waiter.lock().unwrap() = Some(("current".into(), tx));
+        acknowledge_flush(&st, "tray", "current");
+        assert!(matches!(rx.try_recv(), Err(mpsc::TryRecvError::Empty)));
+        assert!(st.flush_waiter.lock().unwrap().is_some());
+        acknowledge_flush(&st, "main", "old");
+        assert!(matches!(rx.try_recv(), Err(mpsc::TryRecvError::Empty)));
+        acknowledge_flush(&st, "main", "current");
+        rx.recv_timeout(Duration::from_secs(1)).unwrap();
     }
 }

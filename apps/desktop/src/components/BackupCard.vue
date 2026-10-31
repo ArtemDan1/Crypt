@@ -92,7 +92,7 @@ async function reveal() {
         ><Button variant="outline" :disabled="busy" @click="cancel">Отмена</Button>
       </div>
     </form>
-    <progress v-if="busy" class="h-1 w-full accent-primary" :value="0" max="1" aria-label="Упаковка бэкапа" />
+    <progress v-if="busy" class="h-1 w-full accent-primary" max="1" aria-label="Упаковка бэкапа" />
     <div v-if="result" role="status" class="rounded-lg bg-primary-soft p-3 text-sm text-primary-soft-fg">
       <p>Бэкап сохранён · {{ (result.bytes / 1024).toFixed(1) }} КБ</p>
       <p class="mt-1 truncate">{{ result.path.split('/').pop() }}</p>

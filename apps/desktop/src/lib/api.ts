@@ -63,7 +63,7 @@ export const api = {
     call<Imported<import('./types').OtpImportReport>>('import_otp', { token, folder }),
   cancelOtpImport: () => call<void>('cancel_otp_import'),
   trashFile: (path: string) => call<void>('trash_file', { path }),
-  inspectBackup: (path: string) => call<import('./types').BackupHeader>('inspect_backup', { path }),
+  inspectBackup: (path: string) => call<import('./types').BackupInspection>('inspect_backup', { path }),
   restoreBackup: (path: string, words: string[]) => call<VaultStatus>('restore_backup', { path, words }),
   exportBackup: (path: string, pin?: string) =>
     call<import('./types').BackupExport>('export_backup', { path, pin: pin || null }),
@@ -159,5 +159,5 @@ export const api = {
   importMarkdown: (path: string) => call<Imported<MarkdownImportReport>>('import_markdown', { path }),
   exportMarkdown: (path: string, includeSecrets: boolean) =>
     call<ExportReport>('export_markdown', { path, includeSecrets }),
-  flushDone: () => call<void>('flush_done'),
+  flushDone: (token: string) => call<void>('flush_done', { token }),
 }
