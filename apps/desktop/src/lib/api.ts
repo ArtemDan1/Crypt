@@ -64,6 +64,7 @@ export const api = {
     call<string>('reveal_secret_revision', { id, name, index }),
   copySecretRevision: (id: Id, name: string, index: number) => call<void>('copy_secret_revision', { id, name, index }),
   generatePassword: (options: PasswordOptions) => call<string>('generate_password', { options }),
+  copyText: (text: string) => call<void>('copy_text', { text }),
   generatePasswords: (options: PasswordOptions, count: number) =>
     call<GeneratedPassword[]>('generate_passwords', { options, count }),
   totpNow: (id: Id) => call<TotpCode | null>('totp_now', { id }),

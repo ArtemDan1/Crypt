@@ -26,6 +26,17 @@ mod tests {
         (d, st, id)
     }
     #[test]
+    fn copy_text_needs_unlocked_vault_and_uses_clipboard() {
+        let (_d, mut st, _id) = state();
+        let cb = std::sync::Arc::new(crate::clipboard::MemoryClipboard::default());
+        st.clipboard = cb.clone();
+        copy_text(&st, "Hollow-Brick").unwrap();
+        assert_eq!(cb.read(), "Hollow-Brick");
+        lock(&st);
+        assert!(copy_text(&st, "x").is_err());
+        assert_eq!(cb.read(), "Hollow-Brick");
+    }
+    #[test]
     fn overview_hides_sensitive_values() {
         let (_d, st, id) = state();
         for (name, value) in [
@@ -211,6 +222,12 @@ pub fn reveal(st: &AppState, id: &RecordId, name: &str) -> ApiResult<String> {
             .unwrap_or_default())
     })
 }
+/// Copy a value that is not stored yet (a freshly generated password) with the usual auto-clear.
+pub fn copy_text(st: &AppState, text: &str) -> ApiResult<()> {
+    with_vault(st, |_| Ok(()))?;
+    copy_with_clear(st.clipboard.clone(), text, clear_after(st));
+    Ok(())
+}
 pub fn copy_value(st: &AppState, id: &RecordId, name: &str) -> ApiResult<()> {
     with_vault(st, |v| {
         allow_value(name)?;
@@ -303,6 +320,11 @@ pub mod cmd {
         name: String,
     ) -> ApiResult<()> {
         copy_value(&st, &id, &name)
+    }
+    #[tauri::command]
+    pub async fn copy_text(st: State<'_, std::sync::Arc<AppState>>, text: String) -> ApiResult<()> {
+        let text = zeroize::Zeroizing::new(text);
+        super::copy_text(&st, &text)
     }
     #[tauri::command]
     pub async fn set_secret(

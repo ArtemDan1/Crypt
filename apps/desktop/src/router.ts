@@ -18,6 +18,7 @@ export const router = createRouter({
         { path: 'folder/:folderId', component: () => import('@/views/Directory.vue'), props: true },
         { path: 'tag/:tag', component: () => import('@/views/TagView.vue'), props: true },
         { path: 'secrets', component: () => import('@/views/Secrets.vue') },
+        { path: 'generator', component: () => import('@/views/Generator.vue') },
         { path: 'trash', component: () => import('@/views/Trash.vue') },
         { path: 'settings', component: () => import('@/views/Settings.vue') },
       ],

@@ -415,6 +415,10 @@ const secretHandlers: Record<string, (a: any) => unknown> = {
     need()
     return mockPassword(options)
   },
+  copy_text: ({ text }) => {
+    need()
+    return copyMock(text)
+  },
   generate_passwords: ({ options, count }) => {
     need()
     if (count < 1 || count > 10) err('Validation', 'Можно создать от 1 до 10 вариантов')
