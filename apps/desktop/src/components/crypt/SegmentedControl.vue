@@ -12,7 +12,7 @@ const props = withDefaults(
   defineProps<{
     modelValue: T
     options: SegmentOption<T>[]
-    ariaLabel: string
+    label: string
     size?: 'sm' | 'md'
     iconOnly?: boolean
   }>(),
@@ -38,7 +38,7 @@ watch(
   <div
     ref="root"
     role="group"
-    :aria-label="props.ariaLabel"
+    :aria-label="props.label"
     class="bg-muted relative inline-flex rounded-[9px] p-[3px]"
     :class="props.size === 'sm' ? 'h-8' : 'h-9'"
   >

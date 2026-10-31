@@ -5,7 +5,8 @@ import { Clock, FolderRoot, KeyRound, Lock, Plus, Search, SlidersHorizontal, Tra
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import FolderTree from '@/components/FolderTree.vue'
 import CryptMark from '@/components/crypt/CryptMark.vue'
-import KindTile, { type TileTone } from '@/components/crypt/KindTile.vue'
+import KindTile from '@/components/crypt/KindTile.vue'
+import { toneForType } from '@/lib/tones'
 import AutolockRing from '@/components/crypt/AutolockRing.vue'
 import { api } from '@/lib/api'
 import { typeIcon } from '@/lib/icons'
@@ -27,8 +28,6 @@ const activeFolder = computed(() =>
 const topTags = computed(() => lib.tags.slice(0, 10))
 const total = computed(() => lib.records.length)
 const isActive = (p: string) => route.path === p
-const tones: TileTone[] = ['primary', 'sand', 'slate', 'rose', 'plum']
-const toneOf = (i: number) => tones[i % tones.length]!
 const plural = (n: number) => {
   const m10 = n % 10,
     m100 = n % 100
@@ -117,13 +116,13 @@ defineExpose({ newFolder })
       <section class="flex flex-col gap-px">
         <h4 class="text-muted-foreground px-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">Типы</h4>
         <RouterLink
-          v-for="(t, i) in lib.types"
+          v-for="t in lib.types"
           :key="t.id"
           :to="`/t/${t.id}`"
           class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 transition-colors"
           :class="row(isActive(`/t/${t.id}`))"
         >
-          <KindTile :icon="typeIcon(t.icon)" :tone="toneOf(i)" size="sm" />
+          <KindTile :icon="typeIcon(t.icon)" :tone="toneForType(lib.types, t.id)" size="sm" />
           <span class="flex-1 truncate">{{ t.name }}</span>
           <span class="text-muted-foreground text-xs font-normal">{{ lib.countByType.get(t.id) || '' }}</span>
         </RouterLink>

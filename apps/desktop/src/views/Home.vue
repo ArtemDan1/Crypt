@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { Plus } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import PageHeader from '@/components/PageHeader.vue'
-import RecordList from '@/components/RecordList.vue'
+import RecordCard from '@/components/RecordCard.vue'
 import { api } from '@/lib/api'
 import { useLibrary } from '@/stores/library'
 
@@ -26,7 +26,7 @@ async function create() {
     <PageHeader title="Недавние">
       <Button size="sm" @click="create"><Plus class="size-4" /> Новая запись</Button>
     </PageHeader>
-    <div class="flex-1 overflow-auto px-3 py-3">
+    <div class="flex-1 overflow-auto px-6 py-6">
       <div
         v-if="!lib.types.length"
         class="mx-3 mb-4 flex items-center gap-3 rounded-xl border border-dashed p-4 text-[13px]"
@@ -37,7 +37,10 @@ async function create() {
         <Button size="sm" variant="outline" @click="addStarter">Добавить тип «Сервер»</Button>
         <Button size="sm" variant="outline" @click="router.push('/types?new=1')">Создать свой</Button>
       </div>
-      <RecordList :records="recent" empty="Записей пока нет — нажмите ⌘N" />
+      <div v-if="recent.length" class="anim-in grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3 px-3">
+        <RecordCard v-for="r in recent" :key="r.id" :record="r" />
+      </div>
+      <p v-else class="text-muted-foreground px-3 py-6 text-[13px]">Записей пока нет — нажмите ⌘N</p>
     </div>
   </div>
 </template>
