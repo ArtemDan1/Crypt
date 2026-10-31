@@ -13,12 +13,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { api } from '@/lib/api'
-import type { SshCandidate } from '@/lib/types'
+import type { SshCandidate, SshImportResult } from '@/lib/types'
 import { defaultTitle, selectable } from '@/lib/sshImport'
 import { useSession } from '@/stores/session'
 import { useLibrary } from '@/stores/library'
 const props = defineProps<{ open: boolean }>(),
-  emit = defineEmits<{ 'update:open': [value: boolean]; imported: [] }>()
+  emit = defineEmits<{ 'update:open': [value: boolean]; imported: [result: SshImportResult[]] }>()
 interface Row {
   candidate: SshCandidate
   selected: boolean
@@ -104,7 +104,7 @@ async function run() {
         }
       }
     await lib.changed()
-    emit('imported')
+    emit('imported', result)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'Не удалось импортировать ключи')
   } finally {

@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { Dices, Download, KeyRound, Plus, Search, LockKeyhole, CreditCard, FileLock, Terminal, Key } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import RecordContextMenu from '@/components/RecordContextMenu.vue'
-import SshImportDialog from '@/components/secret/SshImportDialog.vue'
 import KindTile from '@/components/crypt/KindTile.vue'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
@@ -16,7 +15,6 @@ const lib = useLibrary(),
   router = useRouter(),
   query = ref(''),
   tab = ref<SecretKind | null>(null)
-const importOpen = ref(false)
 const kinds: SecretKind[] = ['login', 'sshkey', 'token', 'card', 'note']
 const labels: Record<SecretKind, string> = {
   login: 'Логины',
@@ -51,14 +49,9 @@ async function create(kind: SecretKind) {
   <div class="flex h-full flex-col">
     <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-2 border-b pr-5 pl-7">
       <h1 class="flex-1 text-[17px] font-semibold tracking-[-.01em]">Секреты</h1>
-      <Button
-        variant="outline"
-        size="sm"
-        aria-label="Импорт из ~/.ssh"
-        title="Импорт из ~/.ssh"
-        @click="importOpen = true"
-        ><Download class="size-4"
-      /></Button>
+      <Button variant="outline" size="sm" aria-label="Импорт" title="Импорт" @click="router.push('/import')"
+        ><Download class="size-4" /> Импорт</Button
+      >
       <Button variant="outline" size="sm" @click="router.push('/generator')"><Dices class="size-4" /> Генератор</Button>
       <DropdownMenu
         ><DropdownMenuTrigger as-child
@@ -129,6 +122,5 @@ async function create(kind: SecretKind) {
         <p class="text-muted-foreground mt-1 text-xs">Создайте логин, ключ, токен, карту или защищённую заметку.</p>
       </div>
     </div>
-    <SshImportDialog v-model:open="importOpen" />
   </div>
 </template>

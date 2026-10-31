@@ -472,7 +472,17 @@ async function copyExport() {
         </div>
 
         <BackupCard v-if="section === 'vault'" />
-        <TransferSection v-if="section === 'vault'" @imported="snapshotsKey++" />
+        <button
+          v-if="section === 'vault'"
+          class="w-full rounded-xl border bg-card p-4 text-left hover:border-primary"
+          @click="router.push('/import')"
+        >
+          <span class="font-medium">Импорт</span
+          ><span class="mt-1 block text-sm text-muted-foreground"
+            >Пароли браузеров, коды 2FA, KeePass, Markdown и SSH</span
+          >
+        </button>
+        <TransferSection v-if="section === 'vault'" />
         <SnapshotsSection v-if="section === 'vault'" :key="snapshotsKey" />
 
         <section
