@@ -1,6 +1,6 @@
 [package]
 name = "crypt-desktop"
-version = "0.1.0"
+version = "1.0.0"
 description = "Crypt — encrypted personal knowledge base"
 edition = "2024"
 rust-version = "1.94"
