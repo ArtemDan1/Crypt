@@ -134,8 +134,12 @@ defineExpose({ startRename })
       <ContextMenu>
         <ContextMenuTrigger as-child>
           <div
-            class="group flex h-[30px] items-center gap-1 rounded-md pr-2 text-[13px]"
-            :class="activeId === f.id ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60'"
+            class="group flex h-[30px] items-center gap-1 rounded-[7px] pr-2 text-[13px] transition-colors"
+            :class="
+              activeId === f.id
+                ? 'bg-sidebar-accent text-foreground font-semibold'
+                : 'text-foreground hover:bg-foreground/[.06] font-medium'
+            "
             :style="{ paddingLeft: `${4 + depth * 14}px` }"
           >
             <button
@@ -146,7 +150,11 @@ defineExpose({ startRename })
             >
               <ChevronRight class="size-3.5 transition-transform" :class="open.has(f.id) && 'rotate-90'" />
             </button>
-            <component :is="open.has(f.id) ? FolderOpen : FolderIcon" class="text-muted-foreground size-4 shrink-0" />
+            <component
+              :is="open.has(f.id) ? FolderOpen : FolderIcon"
+              class="size-4 shrink-0"
+              :class="activeId === f.id ? 'text-primary' : 'text-muted-foreground'"
+            />
             <input
               v-if="editing === f.id"
               :ref="(el) => (inputs[f.id] = el as HTMLInputElement)"
@@ -192,17 +200,23 @@ defineExpose({ startRename })
         :active-record-id="activeRecordId"
       />
     </div>
-    <RecordContextMenu v-for="file in files" :key="file.id" :record="file"><RouterLink
-      :to="`/r/${file.id}`"
-      :aria-current="activeRecordId === file.id ? 'page' : undefined"
-      class="flex h-[30px] items-center gap-1 rounded-md pr-2 text-[13px]"
-      :class="activeRecordId === file.id ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60'"
-      :style="{ paddingLeft: `${24 + depth * 14}px` }"
+    <RecordContextMenu v-for="file in files" :key="file.id" :record="file"
+      ><RouterLink
+        :to="`/r/${file.id}`"
+        :aria-current="activeRecordId === file.id ? 'page' : undefined"
+        class="flex h-[30px] items-center gap-1 rounded-[7px] pr-2 text-[13px] transition-colors"
+        :class="
+          activeRecordId === file.id
+            ? 'bg-sidebar-accent text-foreground font-semibold'
+            : 'text-foreground hover:bg-foreground/[.06]'
+        "
+        :style="{ paddingLeft: `${24 + depth * 14}px` }"
+      >
+        <FileText class="text-muted-foreground size-4 shrink-0" />
+        <span class="min-w-0 flex-1 truncate" :class="!file.title && 'text-muted-foreground'">{{
+          file.title || 'Без названия'
+        }}</span>
+      </RouterLink></RecordContextMenu
     >
-      <FileText class="text-muted-foreground size-4 shrink-0" />
-      <span class="min-w-0 flex-1 truncate" :class="!file.title && 'text-muted-foreground'">{{
-        file.title || 'Без названия'
-      }}</span>
-    </RouterLink></RecordContextMenu>
   </div>
 </template>

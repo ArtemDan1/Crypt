@@ -38,3 +38,15 @@ test('activity while stopped does not arm the timer', () => {
   vi.advanceTimersByTime(5_000)
   expect(onIdle).not.toHaveBeenCalled()
 })
+
+test('remaining reports time left and resets on activity', () => {
+  const t = idleTimer(() => {}, 60_000)
+  expect(t.remaining()).toBeNull()
+  t.start()
+  vi.advanceTimersByTime(20_000)
+  expect(t.remaining()).toBe(40_000)
+  t.activity()
+  expect(t.remaining()).toBe(60_000)
+  t.stop()
+  expect(t.remaining()).toBeNull()
+})

@@ -63,8 +63,15 @@ export const useSession = defineStore('session', () => {
     for (const ev of ['pointerdown', 'keydown', 'wheel'] as const)
       window.addEventListener(ev, poke, { passive: true, capture: true })
   }
+  // Countdown for the lock button ring; ticks only while unlocked.
+  const autolockTotal = ref<number | null>(null)
+  const autolockLeft = ref<number | null>(null)
+  let ticker: ReturnType<typeof setInterval> | null = null
+  const tick = () => (autolockLeft.value = idle.remaining())
   function applyAutolock(minutes: number) {
     idle.setDelay(minutes * 60_000)
+    autolockTotal.value = minutes > 0 ? minutes * 60_000 : null
+    tick()
   }
   watch(
     () => status.value.state,
@@ -73,7 +80,14 @@ export const useSession = defineStore('session', () => {
         const st = await api.getSettings().catch(() => null)
         if (st) applyAutolock(st.autolockMinutes)
         idle.start()
-      } else idle.stop()
+        tick()
+        if (!ticker) ticker = setInterval(tick, 1000)
+      } else {
+        idle.stop()
+        if (ticker) clearInterval(ticker)
+        ticker = null
+        autolockLeft.value = null
+      }
     },
   )
 
@@ -82,6 +96,8 @@ export const useSession = defineStore('session', () => {
     methods,
     refresh,
     applyAutolock,
+    autolockLeft,
+    autolockTotal,
     create,
     unlockSeed,
     unlockBiometric,

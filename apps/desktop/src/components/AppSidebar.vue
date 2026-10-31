@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Clock, FolderRoot, Hash, KeyRound, Lock, Plus, Search, Settings, Trash2 } from '@lucide/vue'
+import { Clock, FolderRoot, KeyRound, Lock, Plus, Search, SlidersHorizontal, Trash2 } from '@lucide/vue'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
 import FolderTree from '@/components/FolderTree.vue'
+import CryptMark from '@/components/crypt/CryptMark.vue'
+import KindTile, { type TileTone } from '@/components/crypt/KindTile.vue'
+import AutolockRing from '@/components/crypt/AutolockRing.vue'
 import { api } from '@/lib/api'
 import { typeIcon } from '@/lib/icons'
 import { useLibrary } from '@/stores/library'
@@ -25,6 +27,17 @@ const activeFolder = computed(() =>
 const topTags = computed(() => lib.tags.slice(0, 10))
 const total = computed(() => lib.records.length)
 const isActive = (p: string) => route.path === p
+const tones: TileTone[] = ['primary', 'sand', 'slate', 'rose', 'plum']
+const toneOf = (i: number) => tones[i % tones.length]!
+const plural = (n: number) => {
+  const m10 = n % 10,
+    m100 = n % 100
+  if (m10 === 1 && m100 !== 11) return 'запись'
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'записи'
+  return 'записей'
+}
+const row = (active: boolean) =>
+  active ? 'bg-sidebar-accent text-foreground font-semibold' : 'text-foreground hover:bg-foreground/[.06] font-medium'
 
 async function newRecord() {
   const id = await lib.createRecord({ folder: activeFolder.value ?? null })
@@ -45,98 +58,86 @@ defineExpose({ newFolder })
 </script>
 
 <template>
-  <nav aria-label="Навигация" class="bg-sidebar flex h-full w-60 shrink-0 flex-col border-r text-[13px]">
-    <div data-tauri-drag-region class="flex h-[52px] shrink-0 items-center justify-end px-3">
-      <Button
-        variant="ghost"
-        size="icon-sm"
+  <nav aria-label="Навигация" class="bg-sidebar flex h-full w-62 shrink-0 flex-col border-r text-[13px]">
+    <div data-tauri-drag-region class="flex h-[52px] shrink-0 items-center justify-end px-2.5">
+      <button
+        class="text-muted-foreground hover:bg-foreground/[.08] relative flex size-8 items-center justify-center rounded-lg transition-colors active:scale-95"
         aria-label="Заблокировать (⌘L)"
         title="Заблокировать (⌘L)"
         @click="session.lock()"
       >
-        <Lock class="size-4" />
-      </Button>
+        <AutolockRing :left="session.autolockLeft" :total="session.autolockTotal" :size="28" />
+        <Lock class="size-3.5" :stroke-width="2.2" />
+      </button>
     </div>
-
-    <div class="flex flex-col gap-2 px-2.5 pb-2.5">
-      <div class="flex items-center gap-2.5 px-1.5 py-1">
-        <span class="bg-foreground text-background flex size-7 items-center justify-center rounded-[7px] font-bold"
-          >C</span
-        >
+    <div class="flex flex-col gap-2.5 px-2.5 pb-3">
+      <div class="flex items-center gap-2.5 px-1.5">
+        <CryptMark :size="30" decorative />
         <div class="flex-1 leading-tight">
-          <div class="font-semibold">Личное</div>
-          <div class="text-muted-foreground text-xs">{{ total }} записей</div>
+          <div class="text-[14px] font-semibold">Личное</div>
+          <div class="text-muted-foreground text-xs">{{ total }} {{ plural(total) }}</div>
         </div>
-        <Button
-          variant="secondary"
-          size="icon-sm"
+        <button
+          class="bg-primary text-primary-foreground flex size-[30px] items-center justify-center rounded-lg transition hover:brightness-110 active:scale-95"
           aria-label="Новая запись (⌘N)"
           title="Новая запись (⌘N)"
           @click="newRecord"
         >
-          <Plus class="size-3.5" />
-        </Button>
+          <Plus class="size-[15px]" :stroke-width="2.4" />
+        </button>
       </div>
       <button
-        class="bg-card text-muted-foreground hover:text-foreground flex h-8 items-center gap-2 rounded-md border px-2.5 text-left"
+        class="bg-card text-muted-foreground hover:text-foreground flex h-8 items-center gap-2 rounded-lg border px-2.5 text-left transition-colors"
         @click="emit('search')"
       >
         <Search class="size-3.5" />
         <span class="flex-1">Поиск</span>
-        <kbd class="rounded border px-1.5 text-[11px]">⌘K</kbd>
+        <kbd class="rounded border px-1.5 font-mono text-[11px]">⌘K</kbd>
       </button>
     </div>
-
-    <div class="flex min-h-0 flex-1 flex-col gap-[18px] overflow-auto px-2.5 py-1">
-      <section>
+    <div class="flex min-h-0 flex-1 flex-col gap-4 overflow-auto px-2.5 pt-0.5 pb-3">
+      <section class="flex flex-col gap-px">
         <RouterLink
-          v-for="item in [{ path: '/recent', label: 'Недавние', icon: Clock }]"
-          :key="item.path"
-          :to="item.path"
-          class="flex h-[30px] items-center gap-2 rounded-md px-2"
-          :class="isActive(item.path) ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60'"
+          to="/recent"
+          class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 transition-colors"
+          :class="row(isActive('/recent'))"
         >
-          <component :is="item.icon" class="text-muted-foreground size-4" />{{ item.label }}
+          <Clock class="size-4" :class="isActive('/recent') ? 'text-primary' : 'text-muted-foreground'" />Недавние
         </RouterLink>
-      </section>
-      <section>
-        <h4 class="text-muted-foreground mb-1 px-2 text-[11px] font-medium tracking-wider uppercase">Типы</h4>
-        <RouterLink
-          v-for="t in lib.types"
-          :key="t.id"
-          :to="`/t/${t.id}`"
-          class="flex h-[30px] items-center gap-2 rounded-md px-2"
-          :class="isActive(`/t/${t.id}`) ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60'"
-        >
-          <component :is="typeIcon(t.icon)" class="text-muted-foreground size-4" />
-          <span class="flex-1 truncate">{{ t.name }}</span>
-          <span class="text-muted-foreground text-xs">{{ lib.countByType.get(t.id) || '' }}</span>
-        </RouterLink>
-        <RouterLink
-          to="/types"
-          class="text-muted-foreground hover:bg-accent/60 hover:text-foreground flex h-[30px] items-center gap-2 rounded-md px-2"
-          :class="route.path.startsWith('/types') && 'bg-accent text-foreground'"
-        >
-          <Plus class="size-4" /> <span>{{ lib.types.length ? 'Типы…' : 'Новый тип…' }}</span>
-        </RouterLink>
-      </section>
-
-      <section>
-        <h4 class="text-muted-foreground mb-1 px-2 text-[11px] font-medium tracking-wider uppercase">Хранилище</h4>
         <RouterLink
           to="/secrets"
-          class="flex h-[30px] items-center gap-2 rounded-md px-2"
-          :class="isActive('/secrets') ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60'"
+          class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 transition-colors"
+          :class="row(isActive('/secrets'))"
         >
           <KeyRound class="text-secret size-4" />
           <span class="flex-1">Секреты</span>
-          <span class="text-muted-foreground text-xs">{{ lib.secretsCount || '' }}</span>
+          <span class="text-muted-foreground text-xs font-normal">{{ lib.secretsCount || '' }}</span>
         </RouterLink>
       </section>
-
-      <section>
-        <div class="mb-1 flex items-center px-2">
-          <h4 class="text-muted-foreground flex-1 text-[11px] font-medium tracking-wider uppercase">Файлы</h4>
+      <section class="flex flex-col gap-px">
+        <h4 class="text-muted-foreground px-2 pb-1 text-[11px] font-semibold tracking-wider uppercase">Типы</h4>
+        <RouterLink
+          v-for="(t, i) in lib.types"
+          :key="t.id"
+          :to="`/t/${t.id}`"
+          class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 transition-colors"
+          :class="row(isActive(`/t/${t.id}`))"
+        >
+          <KindTile :icon="typeIcon(t.icon)" :tone="toneOf(i)" size="sm" />
+          <span class="flex-1 truncate">{{ t.name }}</span>
+          <span class="text-muted-foreground text-xs font-normal">{{ lib.countByType.get(t.id) || '' }}</span>
+        </RouterLink>
+        <RouterLink
+          to="/types"
+          class="text-muted-foreground flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 transition-colors hover:bg-foreground/[.06]"
+          :class="route.path.startsWith('/types') && 'bg-sidebar-accent text-foreground'"
+        >
+          <Plus class="size-4" /> <span>{{ lib.types.length ? 'Настроить типы' : 'Новый тип…' }}</span>
+        </RouterLink>
+      </section>
+      <section class="flex flex-col gap-px">
+        <div class="flex items-center px-2 pb-1">
+          <h4 class="text-muted-foreground flex-1 text-[11px] font-semibold tracking-wider uppercase">Файлы</h4>
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
               <button
@@ -155,10 +156,10 @@ defineExpose({ newFolder })
         </div>
         <RouterLink
           to="/"
-          class="flex h-[30px] items-center gap-2 rounded-md px-2 font-mono"
-          :class="isActive('/') ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60'"
+          class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 font-mono transition-colors"
+          :class="row(isActive('/'))"
         >
-          <FolderRoot class="text-muted-foreground size-4" /> /
+          <FolderRoot class="size-4" :class="isActive('/') ? 'text-primary' : 'text-muted-foreground'" /> /
         </RouterLink>
         <FolderTree ref="tree" :parent="null" :depth="0" :active-id="activeFolder" :active-record-id="activeRecord" />
         <p
@@ -168,42 +169,42 @@ defineExpose({ newFolder })
           Здесь пока пусто
         </p>
       </section>
-
-      <section v-if="topTags.length">
-        <h4 class="text-muted-foreground mb-1 px-2 text-[11px] font-medium tracking-wider uppercase">Теги</h4>
-        <RouterLink
-          v-for="[tag, n] in topTags"
-          :key="tag"
-          :to="`/tag/${encodeURIComponent(tag)}`"
-          class="flex h-[30px] items-center gap-2 rounded-md px-2"
-          :class="
-            route.path === `/tag/${encodeURIComponent(tag)}`
-              ? 'bg-accent text-foreground'
-              : 'text-foreground/85 hover:bg-accent/60'
-          "
-        >
-          <Hash class="text-muted-foreground size-3.5" />
-          <span class="flex-1 truncate">{{ tag }}</span>
-          <span class="text-muted-foreground text-xs">{{ n }}</span>
-        </RouterLink>
+      <section v-if="topTags.length" class="flex flex-col gap-1.5">
+        <h4 class="text-muted-foreground px-2 text-[11px] font-semibold tracking-wider uppercase">Теги</h4>
+        <div class="flex flex-wrap gap-1 px-1.5">
+          <RouterLink
+            v-for="[tag, n] in topTags"
+            :key="tag"
+            :to="`/tag/${encodeURIComponent(tag)}`"
+            :title="`${n}`"
+            class="flex h-6 items-center rounded-full px-2 text-xs transition-colors"
+            :class="
+              route.path === `/tag/${encodeURIComponent(tag)}`
+                ? 'bg-primary-soft text-primary-soft-fg'
+                : 'bg-foreground/[.07] text-foreground-2 hover:bg-foreground/[.11]'
+            "
+            >#{{ tag }}</RouterLink
+          >
+        </div>
       </section>
     </div>
-
-    <div class="flex shrink-0 flex-col border-t p-1.5">
+    <div class="flex shrink-0 items-center gap-0.5 border-t px-2.5 py-2">
       <RouterLink
         to="/trash"
-        class="text-muted-foreground hover:bg-accent/60 hover:text-foreground flex h-[30px] items-center gap-2 rounded-md px-2"
-        :class="isActive('/trash') && 'bg-accent text-foreground'"
+        class="text-muted-foreground flex h-8 flex-1 items-center gap-2 rounded-[7px] px-2 transition-colors hover:bg-foreground/[.06]"
+        :class="isActive('/trash') && 'bg-sidebar-accent text-foreground'"
       >
-        <Trash2 class="size-4" /> <span class="flex-1">Корзина</span>
+        <Trash2 class="size-[15px]" /> <span>Корзина</span>
         <span class="text-xs">{{ lib.trashCount || '' }}</span>
       </RouterLink>
       <RouterLink
         to="/settings"
-        class="text-muted-foreground hover:bg-accent/60 hover:text-foreground flex h-[30px] items-center gap-2 rounded-md px-2"
-        :class="isActive('/settings') && 'bg-accent text-foreground'"
+        aria-label="Настройки"
+        title="Настройки"
+        class="text-muted-foreground flex size-8 items-center justify-center rounded-[7px] transition-colors hover:bg-foreground/[.06]"
+        :class="isActive('/settings') && 'bg-sidebar-accent text-foreground'"
       >
-        <Settings class="size-4" /> <span>Настройки</span>
+        <SlidersHorizontal class="size-4" />
       </RouterLink>
     </div>
   </nav>
