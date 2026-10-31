@@ -1,0 +1,1 @@
+{"schemaVersion":4,"services":[{"name":"GitHub","secret":"GEZDGNBVGY3TQOJQ","otp":{"label":"alice","account":"alice","issuer":"GitHub","algorithm":"SHA1","digits":6,"period":30,"tokenType":"TOTP"}}]}

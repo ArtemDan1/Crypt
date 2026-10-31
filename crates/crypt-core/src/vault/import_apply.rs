@@ -59,3 +59,48 @@ mod tests {
         let p=v.preview_logins(&parse_browser_csv(bytes).unwrap().logins); assert_eq!((p.new,p.duplicates),(0,3));
     }
 }
+
+use super::import_otp::{OtpDraft,OtpPreviewRow,OtpTarget,OtpImportReport,otp_uri};
+impl Vault {
+    fn otp_target(&self,d:&OtpDraft) -> OtpTarget {
+        let issuer=d.issuer.trim().to_lowercase();
+        if issuer.is_empty() {return OtpTarget::New;}
+        let mut candidates=vec![];
+        for r in self.records.values().filter(|r|r.deleted_at().is_none() && r.secret_kind()==Some(SecretKind::Login)) {
+            let url=r.secret_value("url").ok().flatten().unwrap_or_default();let host=domain(&url);
+            let labels:Vec<_>=host.split('.').collect();
+            let service=host==issuer || (labels.len()>1 && labels[..labels.len()-1].contains(&issuer.as_str()));
+            let user=r.secret_value("username").ok().flatten().unwrap_or_default();
+            if service && (user.is_empty() || *user==d.account) {candidates.push(r);}
+        }
+        if candidates.len()!=1 {return OtpTarget::New;}
+        let r=candidates[0];if r.secret_value("totp_seed").ok().flatten().is_some_and(|s|!s.is_empty()) {return OtpTarget::New;}
+        OtpTarget::Attach {record:r.id(),title:r.summary().title}
+    }
+    pub fn preview_otp(&self,drafts:&[OtpDraft]) -> Vec<OtpPreviewRow> {
+        let mut used=HashSet::new();
+        drafts.iter().map(|d| {
+            let target=match self.otp_target(d) {OtpTarget::Attach {record,title} if used.insert(record)=>OtpTarget::Attach {record,title},_=>OtpTarget::New};
+            OtpPreviewRow {issuer:d.issuer.clone(),account:d.account.clone(),target}
+        }).collect()
+    }
+    pub fn import_otp(&mut self,drafts:Vec<OtpDraft>,folder_name:&str) -> Result<OtpImportReport> {
+        let folder_name=folder_name.trim();if folder_name.is_empty() {return Err(crate::CryptError::Validation("Укажите папку импорта".into()));}
+        // Resolve all targets against the same vault state that produced the preview.
+        let targets=self.preview_otp(&drafts);let mut result=OtpImportReport {attached:0,created:0,skipped:vec![],missing_batches:vec![]};
+        let mut used=HashSet::new();let mut folder=None;
+        for (d,target) in drafts.into_iter().zip(targets) {
+            let uri=otp_uri(&d);
+            if let OtpTarget::Attach {record,..}=target.target {
+                if used.insert(record) {self.set_secret_value(&record,"totp_seed",Some(&uri))?;result.attached+=1;continue;}
+            }
+            let folder_id=match folder {Some(id)=>id,None=>{
+                let id=match self.folders().iter().find(|f|f.name==folder_name && f.parent.is_none()) {Some(f)=>f.id,None=>self.create_folder(folder_name,None)?};folder=Some(id);id
+            }};
+            self.insert_built(crate::RecordId::new(),NewRecord {title:if d.issuer.is_empty(){d.account.clone()}else{d.issuer.clone()},secret_kind:Some(SecretKind::Login),folder:Some(folder_id),..Default::default()},"import",|r| {
+                r.set_secret_value("username",Some(&d.account))?;r.set_secret_value("totp_seed",Some(&uri))?;Ok(())
+            })?;result.created+=1;
+        }
+        Ok(result)
+    }
+}

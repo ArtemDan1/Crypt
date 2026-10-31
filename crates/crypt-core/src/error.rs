@@ -2,6 +2,10 @@ use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum CryptError {
+    #[error("Введите пароль экспорта")]
+    NeedsPassword,
+    #[error("Неверный пароль экспорта")]
+    ImportPassword,
     #[error("{0}")]
     BackupFormat(String),
     #[error("Эта фраза не подходит к файлу бэкапа")]
