@@ -351,6 +351,36 @@ pub mod cmd {
             Ok(crypt_core::r#gen::generate_password(&options)?.to_string())
         })
     }
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct GeneratedOut {
+        pub value: String,
+        pub bits: u32,
+    }
+    #[tauri::command]
+    pub async fn generate_passwords(
+        st: State<'_, std::sync::Arc<AppState>>,
+        options: PasswordOptions,
+        count: usize,
+    ) -> ApiResult<Vec<GeneratedOut>> {
+        if !(1..=10).contains(&count) {
+            return Err(crate::error::ApiError::new(
+                "Validation",
+                "Можно создать от 1 до 10 вариантов",
+            ));
+        }
+        with_vault(&st, |_| {
+            (0..count)
+                .map(|_| {
+                    let g = crypt_core::r#gen::generate(&options)?;
+                    Ok(GeneratedOut {
+                        value: g.value.to_string(),
+                        bits: g.bits,
+                    })
+                })
+                .collect()
+        })
+    }
     #[tauri::command]
     pub async fn totp_now(
         st: State<'_, std::sync::Arc<AppState>>,

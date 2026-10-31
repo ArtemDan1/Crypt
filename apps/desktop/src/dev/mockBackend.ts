@@ -279,31 +279,60 @@ async function copyMock(text: string) {
     } catch {}
   }, db.settings.clipboardClearSeconds * 1000)
 }
-function mockPassword(o: PasswordOptions) {
-  const classes = [
+const MOCK_WORDS =
+  'acorn amber anchor apple arrow atlas badge bamboo banjo basin beacon birch bison blanket bloom bonfire bramble breeze bridge cabin cactus canal candle canyon carbon cedar cherry cinder clover cobalt comet copper coral cotton crater cricket delta dragon drift ember falcon fennel fern fjord flint fossil garnet glacier granite harbor hazel heron island ivory jasper juniper kettle lagoon lantern lemon linen lotus maple marble meadow mirror mosaic nectar nickel oasis orbit otter paddle pebble pepper pilot pine plaza quartz quill raven ribbon river saddle salmon shadow spruce summit tango thistle timber tundra velvet violet walnut willow zephyr'.split(
+    ' ',
+  )
+function mockPick(n: number) {
+  const bytes = new Uint32Array(1)
+  crypto.getRandomValues(bytes)
+  return bytes[0]! % n
+}
+function mockGenerate(o: PasswordOptions): { value: string; bits: number } {
+  if (o.mode === 'words') {
+    const n = o.words ?? 5
+    if (n < 3 || n > 12) err('Validation', 'Число слов — от 3 до 12')
+    const parts = Array.from({ length: n }, () => {
+      const w = MOCK_WORDS[mockPick(MOCK_WORDS.length)]!
+      return o.capitalize ? w[0]!.toUpperCase() + w.slice(1) : w
+    })
+    if (o.addNumber) parts.push(String(mockPick(100)))
+    return {
+      value: parts.join(o.separator ?? '-'),
+      bits: Math.floor(n * Math.log2(7776) + (o.addNumber ? Math.log2(100) : 0)),
+    }
+  }
+  const sets = [
     [o.lower, 'abcdefghijklmnopqrstuvwxyz'],
     [o.upper, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'],
     [o.digits, '0123456789'],
-    [o.symbols, '!#$%&*+-=?@^_~'],
+    [o.minus, '-'],
+    [o.underline, '_'],
+    [o.space, ' '],
+    [o.symbols, '!"#$%&\'*+,./:;=?@\\^`|~'],
+    [o.brackets, '[]{}()<>'],
+    [o.latin1, 'äöüßéèçñåø'],
+    [!!o.include, o.include ?? ''],
   ] as const
-  const selected = classes.filter(([on]) => on).map(([, s]) => (o.avoidAmbiguous ? s.replace(/[0O1lI]/g, '') : s))
-  if (!selected.length || !Number.isInteger(o.length) || o.length < 8 || o.length > 128)
-    err('Validation', 'Недопустимые параметры пароля')
-  const pick = (n: number) => {
-    const bytes = new Uint8Array(1)
-    do {
-      crypto.getRandomValues(bytes)
-    } while (bytes[0]! >= 256 - (256 % n))
-    return bytes[0]! % n
-  }
-  const chars = selected.map((s) => s[pick(s.length)]!),
-    alphabet = selected.join('')
-  while (chars.length < o.length) chars.push(alphabet[pick(alphabet.length)]!)
+  const keep = (c: string) => !(o.avoidAmbiguous && 'O0Il1|'.includes(c)) && !(o.exclude ?? '').includes(c)
+  const selected = sets
+    .filter(([on]) => on)
+    .map(([, s]) => [...s].filter(keep))
+    .filter((s) => s.length)
+  const pool = [...new Set(selected.flat())]
+  if (!pool.length) err('Validation', 'Выберите хотя бы один набор символов')
+  if (!Number.isInteger(o.length) || o.length < 4 || o.length > 128)
+    err('Validation', 'Длина пароля — от 4 до 128 символов')
+  const chars = o.eachClass !== false && selected.length <= o.length ? selected.map((s) => s[mockPick(s.length)]!) : []
+  while (chars.length < o.length) chars.push(pool[mockPick(pool.length)]!)
   for (let i = chars.length - 1; i > 0; i--) {
-    const j = pick(i + 1)
+    const j = mockPick(i + 1)
     ;[chars[i], chars[j]] = [chars[j]!, chars[i]!]
   }
-  return chars.join('')
+  return { value: chars.join(''), bits: Math.floor(o.length * Math.log2(pool.length)) }
+}
+function mockPassword(o: PasswordOptions) {
+  return mockGenerate(o).value
 }
 const demoPublic = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILu+jPmTl2mK6+UfBrEVDYJfXxfQ9104aEN5V39RKfhp'
 function demoInfo(name: string): SshKeyInfo {
@@ -386,6 +415,11 @@ const secretHandlers: Record<string, (a: any) => unknown> = {
     need()
     return mockPassword(options)
   },
+  generate_passwords: ({ options, count }) => {
+    need()
+    if (count < 1 || count > 10) err('Validation', 'Можно создать от 1 до 10 вариантов')
+    return Array.from({ length: count }, () => mockGenerate(options))
+  },
   totp_now: ({ id }) => {
     if (!values(id).totp_seed) return null
     const period = 30
@@ -458,7 +492,12 @@ interface MockVersion {
   state: RecordView
 }
 const versions = new Map<string, MockVersion[]>()
-const snapshots: { id: string; name: string; created_at: number; records: Map<string, { version: string; trashed: boolean }> }[] = []
+const snapshots: {
+  id: string
+  name: string
+  created_at: number
+  records: Map<string, { version: string; trashed: boolean }>
+}[] = []
 const VERSION_KIND: Record<string, string> = {
   create_record: 'create',
   set_title: 'title',
@@ -492,7 +531,13 @@ const findVersion = (id: string, version: string) =>
 function revert(id: string, version: string) {
   const old = findVersion(id, version).state
   const r = rec(id)
-  Object.assign(r, { title: old.title, body: old.body, type_id: old.type_id, tags: [...old.tags], fields: structuredClone(old.fields) })
+  Object.assign(r, {
+    title: old.title,
+    body: old.body,
+    type_id: old.type_id,
+    tags: [...old.tags],
+    fields: structuredClone(old.fields),
+  })
   touch(r)
   recordVersion(id, 'revert')
 }
@@ -574,9 +619,16 @@ const handlers: Record<string, (a: any) => unknown> = {
   },
   import_markdown: () => {
     need()
-    return { report: { notes: 0, folders: 1, typed: 0, links: 0, skipped_files: 0 }, snapshot: 'Перед импортом Obsidian' }
+    return {
+      report: { notes: 0, folders: 1, typed: 0, links: 0, skipped_files: 0 },
+      snapshot: 'Перед импортом Obsidian',
+    }
   },
-  export_markdown: ({ path }) => ({ path: `${path}/Crypt ${new Date().toISOString().slice(0, 10)}`, notes: 0, secrets: 0 }),
+  export_markdown: ({ path }) => ({
+    path: `${path}/Crypt ${new Date().toISOString().slice(0, 10)}`,
+    notes: 0,
+    secrets: 0,
+  }),
   status: () => status(),
   delete_vault: ({ confirmation, pin }) => {
     need()

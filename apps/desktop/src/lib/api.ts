@@ -16,6 +16,7 @@ import type {
   SecretOverview,
   SshKeyInfo,
   TotpCode,
+  GeneratedPassword,
   PasswordOptions,
   SecretRevisionMeta,
   SshCandidate,
@@ -63,6 +64,8 @@ export const api = {
     call<string>('reveal_secret_revision', { id, name, index }),
   copySecretRevision: (id: Id, name: string, index: number) => call<void>('copy_secret_revision', { id, name, index }),
   generatePassword: (options: PasswordOptions) => call<string>('generate_password', { options }),
+  generatePasswords: (options: PasswordOptions, count: number) =>
+    call<GeneratedPassword[]>('generate_passwords', { options, count }),
   totpNow: (id: Id) => call<TotpCode | null>('totp_now', { id }),
   copyTotp: (id: Id) => call<void>('copy_totp', { id }),
   setSshKey: (id: Id, pem: string, passphrase?: string) =>

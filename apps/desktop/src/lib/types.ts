@@ -146,12 +146,29 @@ export interface TotpCode {
   period: number
 }
 export interface PasswordOptions {
+  mode?: 'chars' | 'words'
   length: number
   lower: boolean
   upper: boolean
   digits: boolean
   symbols: boolean
   avoidAmbiguous: boolean
+  minus?: boolean
+  underline?: boolean
+  space?: boolean
+  brackets?: boolean
+  latin1?: boolean
+  eachClass?: boolean
+  include?: string
+  exclude?: string
+  words?: number
+  separator?: string
+  capitalize?: boolean
+  addNumber?: boolean
+}
+export interface GeneratedPassword {
+  value: string
+  bits: number
 }
 export interface SecretRevisionMeta {
   index: number

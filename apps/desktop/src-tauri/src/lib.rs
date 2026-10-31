@@ -66,6 +66,7 @@ pub fn run() {
             commands::secrets::cmd::reveal_secret_revision,
             commands::secrets::cmd::copy_secret_revision,
             commands::secrets::cmd::generate_password,
+            commands::secrets::cmd::generate_passwords,
             commands::secrets::cmd::totp_now,
             commands::secrets::cmd::copy_totp,
             commands::secrets::cmd::set_ssh_key,
