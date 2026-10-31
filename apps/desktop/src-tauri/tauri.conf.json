@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Crypt",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "identifier": "dev.crypt.app",
   "build": {
     "frontendDist": "../dist",
@@ -26,6 +26,19 @@
           "y": 20
         },
         "visible": false
+      },
+      {
+        "label": "tray",
+        "title": "Crypt",
+        "width": 340,
+        "height": 420,
+        "url": "index.html#/tray",
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": false,
+        "resizable": false
       }
     ],
     "security": {

@@ -10,21 +10,57 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { Fingerprint, FolderOpen, KeyRound, Lock, Timer } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
-import PageHeader from '@/components/PageHeader.vue'
+import SegmentedControl from '@/components/crypt/SegmentedControl.vue'
+import { getThemePref, setThemePref, type ThemePref } from '@/lib/theme'
+import { useRoute } from 'vue-router'
 import SnapshotsSection from '@/components/SnapshotsSection.vue'
+import BackupCard from '@/components/BackupCard.vue'
 import TransferSection from '@/components/TransferSection.vue'
 import { api, CryptApiError } from '@/lib/api'
 import type { UnlockMethods, Settings as SettingsDTO, AgentStatus, SshConfigStatus } from '@/lib/types'
 import { useSession } from '@/stores/session'
 
 const session = useSession()
+const route = useRoute()
+type Section = 'security' | 'ssh' | 'vault' | 'danger'
+const SECTIONS: { id: Section; label: string }[] = [
+  { id: 'security', label: 'Безопасность' },
+  { id: 'ssh', label: 'Секреты и SSH' },
+  { id: 'vault', label: 'Хранилище' },
+  { id: 'danger', label: 'Опасная зона' },
+]
+const readSection = (): Section => {
+  const q = String(route.query.section ?? '')
+  if (SECTIONS.some((x) => x.id === q)) return q as Section
+  try {
+    const v = localStorage.getItem('crypt.settings.section')
+    if (SECTIONS.some((x) => x.id === v)) return v as Section
+  } catch {}
+  return 'security'
+}
+const section = ref<Section>(readSection())
+function pick(id: Section) {
+  section.value = id
+  try {
+    localStorage.setItem('crypt.settings.section', id)
+  } catch {}
+}
+const markTop = computed(() => SECTIONS.findIndex((x) => x.id === section.value) * 38)
+const theme = ref<ThemePref>(getThemePref())
+watch(theme, (t) => setThemePref(t))
+const themeOptions = [
+  { value: 'system' as const, label: 'Система' },
+  { value: 'light' as const, label: 'Светлая' },
+  { value: 'dark' as const, label: 'Тёмная' },
+]
+const autolockOptions = [1, 5, 15, 30, 60].map((m) => ({ value: m, label: m === 60 ? '1 час' : `${m} мин` }))
 const router = useRouter()
 const lib = useLibrary()
 const deleteOpen = ref(false)
@@ -38,6 +74,13 @@ function resetDeletion(open: boolean) {
   deleteOpen.value = open
   deleteConfirmation.value = ''
   deletePin.value = ''
+}
+const confirmShake = ref(false)
+function tryDelete() {
+  if (deleteConfirmation.value === 'УДАЛИТЬ') return deleteVault()
+  confirmShake.value = false
+  requestAnimationFrame(() => (confirmShake.value = true))
+  setTimeout(() => (confirmShake.value = false), 500)
 }
 async function deleteVault() {
   if (deleteConfirmation.value !== 'УДАЛИТЬ' || deleting.value) return
@@ -203,25 +246,54 @@ async function copyExport() {
 </script>
 
 <template>
-  <div class="flex h-full flex-col">
-    <PageHeader title="Настройки" />
-    <div class="flex-1 overflow-auto px-6 py-6">
-      <div class="mx-auto flex max-w-[680px] flex-col gap-6">
-        <section class="divide-y rounded-xl border">
+  <div class="flex h-full">
+    <nav aria-label="Разделы настроек" class="relative flex w-[220px] shrink-0 flex-col gap-0.5 px-3 py-8">
+      <h1 data-tauri-drag-region class="mb-3.5 ml-3 text-[22px] font-semibold tracking-[-.02em]">Настройки</h1>
+      <div class="relative flex flex-col gap-0.5">
+        <span
+          aria-hidden="true"
+          class="bg-primary pointer-events-none absolute left-2 z-10 h-[18px] w-[3px] rounded-full transition-[top] duration-350 ease-[cubic-bezier(.3,1.2,.5,1)]"
+          :style="{ top: `${markTop + 9}px` }"
+        />
+        <button
+          v-for="x in SECTIONS"
+          :key="x.id"
+          class="flex h-9 items-center rounded-lg pr-3 pl-5 text-left text-[14px] transition-colors"
+          :class="[
+            section === x.id ? 'bg-accent font-semibold' : 'hover:bg-foreground/[.05] font-medium',
+            x.id === 'danger' && 'text-destructive',
+          ]"
+          :aria-current="section === x.id ? 'page' : undefined"
+          @click="pick(x.id)"
+        >
+          {{ x.label }}
+        </button>
+      </div>
+    </nav>
+    <div class="flex-1 overflow-auto py-9 pr-12 pl-6">
+      <div :key="section" class="anim-in flex max-w-[680px] flex-col gap-[18px]">
+        <h2 class="text-[20px] font-semibold tracking-[-.01em]">{{ SECTIONS.find((x) => x.id === section)!.label }}</h2>
+        <section v-if="section === 'security'" class="bg-card flex flex-col gap-3 rounded-[14px] border px-[18px] py-4">
+          <span class="flex flex-col gap-0.5"
+            ><span class="text-[14px] font-medium">Тема</span
+            ><span class="text-muted-foreground text-xs">«Система» следует настройке macOS</span></span
+          >
+          <SegmentedControl v-model="theme" :options="themeOptions" label="Тема" class="self-start" />
+        </section>
+        <section v-if="section === 'security'" class="bg-card divide-y rounded-[14px] border">
           <div class="flex items-center gap-3 px-4 py-3.5">
             <Timer class="text-muted-foreground size-5" />
             <div class="flex-1">
               <div class="font-medium">Автоблокировка</div>
               <div class="text-muted-foreground text-xs">Также при блокировке экрана и сне Mac</div>
             </div>
-            <Select :model-value="String(autolock)" @update:model-value="setAutolock">
-              <SelectTrigger class="w-36" aria-label="Автоблокировка"><SelectValue /></SelectTrigger>
-              <SelectContent
-                ><SelectItem v-for="m in [1, 5, 15, 30, 60]" :key="m" :value="String(m)"
-                  >через {{ m }} мин</SelectItem
-                ></SelectContent
-              >
-            </Select>
+            <SegmentedControl
+              :model-value="autolock"
+              :options="autolockOptions"
+              label="Автоблокировка"
+              size="sm"
+              @update:model-value="setAutolock"
+            />
           </div>
           <div class="flex items-center gap-3 px-4 py-3.5">
             <Fingerprint class="text-muted-foreground size-5" />
@@ -271,7 +343,7 @@ async function copyExport() {
           </div>
         </section>
 
-        <section v-if="secretSettings" class="divide-y rounded-xl border">
+        <section v-if="section === 'ssh' && secretSettings" class="bg-card divide-y rounded-[14px] border">
           <h2 class="px-4 py-3 text-sm font-medium">Секреты и ssh-agent</h2>
           <div class="flex items-center gap-3 px-4 py-3.5">
             <KeyRound class="size-5 text-secret" />
@@ -354,7 +426,7 @@ async function copyExport() {
           /></label>
         </section>
 
-        <section class="rounded-xl border px-4 py-3.5">
+        <section v-if="section === 'security'" class="bg-card rounded-[14px] border px-[18px] py-4">
           <div class="flex items-center gap-3">
             <KeyRound class="text-secret size-5" />
             <div class="flex-1">
@@ -376,11 +448,12 @@ async function copyExport() {
             </template>
             <Button v-else variant="outline" size="sm" @click="hideSeed">Скрыть · {{ seedLeft }}</Button>
           </div>
-          <ol v-if="seed" class="mt-4 grid grid-cols-4 gap-2">
+          <ol v-if="seed" class="bg-background mt-4 grid grid-cols-4 gap-1.5 rounded-[10px] p-3">
             <li
               v-for="(w, i) in seed"
               :key="i"
-              class="bg-muted/60 flex h-9 items-center gap-2 rounded-md px-2.5 font-mono text-[13px] selectable"
+              class="bg-card anim-reveal selectable flex h-[34px] items-center gap-2 rounded-[7px] border px-2.5 font-mono text-[13px]"
+              :style="{ animationDelay: `${i * 25}ms` }"
             >
               <span class="text-muted-foreground w-[18px] text-right text-xs">{{ i + 1 }}</span
               >{{ w }}
@@ -388,10 +461,36 @@ async function copyExport() {
           </ol>
         </section>
 
-        <TransferSection @imported="snapshotsKey++" />
-        <SnapshotsSection :key="snapshotsKey" />
+        <div
+          v-if="seed && section === 'security'"
+          class="text-muted-foreground -mt-2 flex items-center gap-2.5 text-xs"
+        >
+          <span class="bg-muted h-1 flex-1 overflow-hidden rounded-full"
+            ><span
+              class="bg-secret block h-1 transition-[width] duration-1000 ease-linear"
+              :style="{ width: `${(seedLeft / 60) * 100}%` }"
+          /></span>
+          Скроется через {{ seedLeft }} с
+        </div>
 
-        <section class="flex items-center gap-3 rounded-xl border px-4 py-3.5">
+        <BackupCard v-if="section === 'vault'" />
+        <button
+          v-if="section === 'vault'"
+          class="w-full rounded-xl border bg-card p-4 text-left hover:border-primary"
+          @click="router.push('/import')"
+        >
+          <span class="font-medium">Импорт</span
+          ><span class="mt-1 block text-sm text-muted-foreground"
+            >Пароли браузеров, коды 2FA, KeePass, Markdown и SSH</span
+          >
+        </button>
+        <TransferSection v-if="section === 'vault'" />
+        <SnapshotsSection v-if="section === 'vault'" :key="snapshotsKey" />
+
+        <section
+          v-if="section === 'vault'"
+          class="bg-card flex items-center gap-3 rounded-[14px] border px-[18px] py-4"
+        >
           <FolderOpen class="text-muted-foreground size-5" />
           <div class="min-w-0 flex-1">
             <div class="font-medium">Расположение хранилища</div>
@@ -399,7 +498,7 @@ async function copyExport() {
           </div>
           <Button variant="outline" size="sm" @click="reveal">Показать в Finder</Button>
         </section>
-        <section class="rounded-xl border border-destructive/30 px-4 py-4">
+        <section v-if="section === 'danger'" class="border-destructive/30 rounded-[14px] border px-[18px] py-[18px]">
           <div class="font-medium">Удаление хранилища</div>
           <p class="text-muted-foreground mt-1 text-xs">
             Все записи, секреты, папки и ключи быстрого входа на этом Mac будут удалены. Отменить удаление нельзя.
@@ -426,6 +525,8 @@ async function copyExport() {
           ><span>Для подтверждения введите УДАЛИТЬ</span
           ><Input
             v-model="deleteConfirmation"
+            :class="confirmShake && 'anim-shake'"
+            @keydown.enter="tryDelete"
             :disabled="deleting"
             autocomplete="off"
             aria-label="Подтверждение удаления"

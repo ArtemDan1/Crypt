@@ -70,13 +70,13 @@ export function inputValue(v: FieldValue | undefined): string {
 }
 
 export const OPTION_COLORS: Record<string, string> = {
-  zinc: 'bg-zinc-700/60 text-zinc-200',
-  red: 'bg-red-900/60 text-red-200',
-  orange: 'bg-orange-900/60 text-orange-200',
-  amber: 'bg-amber-900/60 text-amber-200',
-  green: 'bg-green-900/60 text-green-200',
-  teal: 'bg-teal-900/60 text-teal-200',
-  blue: 'bg-blue-900/60 text-blue-200',
-  purple: 'bg-purple-900/60 text-purple-200',
+  zinc: 'bg-[#EFEDE8] text-[#3F3D39] dark:bg-[#2A2926] dark:text-[#CFCCC5]',
+  red: 'bg-red-100 text-red-800 dark:bg-red-950/70 dark:text-red-200',
+  orange: 'bg-orange-100 text-orange-800 dark:bg-orange-950/70 dark:text-orange-200',
+  amber: 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-200',
+  green: 'bg-[#E3F1EC] text-[#0B5E46] dark:bg-[#173129] dark:text-[#7FD9B7]',
+  teal: 'bg-teal-100 text-teal-800 dark:bg-teal-950/70 dark:text-teal-200',
+  blue: 'bg-[#E4E8F1] text-[#33456B] dark:bg-[#1E2433] dark:text-[#A9B8DA]',
+  purple: 'bg-[#F1E6F5] text-[#6A2F7F] dark:bg-[#2A1E31] dark:text-[#D3A8E2]',
 }
 export const optionClass = (c: string | null) => OPTION_COLORS[c ?? 'zinc'] ?? OPTION_COLORS.zinc

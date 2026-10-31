@@ -1,0 +1,84 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-10-31-redesign-seal.md
+
+Pre-flight:
+- T3 produces SegmentedControl/KindTile/SecretValuePill; consumed by T4,T5,T8,T10,T12 — consistent.
+- T4 produces session.autolockLeft/Total; consumed by T15 (Tray status) — consistent.
+- T9 produces api.generatePasswords + PasswordOptions; consumed by T10 — consistent.
+- T2 CryptMark consumed by T4,T14,T15 — consistent.
+- T15 recent.rs: plan Interfaces updated to Rust in-memory; Step 4 uses api.recentSecrets — consistent.
+Task 1: Ruling: визуальную сверку с макетом в pnpm dev делаю пакетно после задач 4–8, а не после каждой — экономия времени — если что‑то разойдётся, правки позже
+Task 1: complete (commits f1a3320..5da6c28, tests: bash -c 'cd apps/desktop && pnpm vitest run' →              learn more: https://vitest.dev/guide/improving-performance#test-environments)
+Task 2: complete (commits 5da6c28..bfd66d7, tests: bash -c 'cd apps/desktop && pnpm build >/dev/null && echo build-ok' → build-ok)
+Task 3: complete (commits bfd66d7..ae8267c, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  52 passed (52))
+Task 4: Ruling: варианта «Никогда» в автоблокировке нет (валидация 1/5/15/30/60 в Rust); его не добавляю — вне объёма спецификации — если нужен, отдельная правка validate_settings
+Task 4: Ruling: «Недавние» в сайдбаре ведёт на /recent, а не на / — иначе подсвечивались бы два пункта сразу; блок недавних всё равно есть в корне / — цена: одна строка в to=
+Task 4: complete (commits ae8267c..56454dd, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  53 passed (53))
+Task 5: Ruling: проп SegmentedControl ariaLabel → label (vue-tsc считает aria-label атрибутом) — план обновлён — цена: переименование
+Task 5: Ruling: directory.test.ts обновлён под новое поведение (недавние в корне, крошки со стрелками) — так требует спека — цена: нет
+Task 5: complete (commits 56454dd..6351ae4, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  55 passed (55))
+Task 6: complete (commits 6351ae4..f24f092, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  55 passed (55))
+Task 7: complete (commits f24f092..b73220c, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  55 passed (55))
+Task 8: Ruling: «Секреты» остаются списком, деталь — страница записи с SecretPanel (без разделённого экрана из макета) — план не требовал split‑view, меньше риска — цена: позже можно добавить панель справа
+Task 8: Ruling: «Секреты» остаются списком, деталь — страница записи с SecretPanel (без разделённого экрана из макета) — план не требовал split‑view — цена: позже можно добавить панель
+Task 8: Ruling: CardFace берёт recordId и раскрывает номер сам (revealSecret + таймер), а не проп number — так номер не идёт через родителя — цена: малая
+Task 8: complete (commits b73220c..feb23b5, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  60 passed (60))
+Task 9: Ruling: ожидание bits для «5 слов + число» исправлено 70→71 (5·log2 7776 + log2 100 = 71.27) — ошибка арифметики в плане, формула спеки верна — цена: нет. Длина символов допускается 4..=128 (а не 64) ради старых сохранённых настроек — ползунок UI 4–64
+Task 9: Ruling: each_class по умолчанию true (сохраняет прежнюю гарантию «каждый класс хотя бы раз»); старый tests/gen_totp.rs обновлён под новый набор спецсимволов и минимум 4 — так в спеке — цена: нет
+Task 9: complete (commits feb23b5..750b892, tests: bash -c 'cargo test 2>&1 | grep -E 'test result' | awk '{p+=$4; f+=$6} END {print "passed",p,"failed",f; exit f>0}'' → passed 130 failed 0)
+Task 9: Ruling: не запускать cargo fmt по всему workspace — в проекте нет rustfmt.toml и код отформатирован иначе; посторонние правки откатил — цена: нет
+Task 10: Ruling: поповер PasswordGenerator в поле пароля оставлен прежним (совместим с crypt.pwgen и новым бэкендом), полноценные профили — на экране /generator; добавлена команда copy_text для копирования ещё не сохранённого пароля с автоочисткой — цена: поповер можно унифицировать позже
+Task 10: complete (commits 750b892..43e5dd3, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  63 passed (63))
+Task 11: complete (commits 43e5dd3..5c506b3, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  63 passed (63))
+Task 12: Ruling: кнопка «Удалить» в диалоге неактивна до ввода УДАЛИТЬ (как было), тряска — при Enter с неверным словом — цена: нет. Ruling: плитка CryptMark в тёмной теме светлее (#33322E), иначе сливается с сайдбаром — иконка приложения не меняется — цена: нет
+Task 12: complete (commits 5c506b3..c9cce65, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  63 passed (63))
+Task 13: complete (commits c9cce65..e7b09b2, tests: bash -c 'cd apps/desktop && pnpm vitest run 2>&1 | grep -E '^ +Tests'' →       Tests  63 passed (63))
+Task 14: partial — Unlock.vue готов (коммит 5e16f17); Onboarding.vue ещё не переделан
+
+Task 14: Ruling: Prettier применён также к AppShell.vue и TransferSection.vue — исходный общий check падал на этих двух файлах; только форматирование — цена ошибки: лишний форматирующий diff.
+Task 14: complete — Onboarding: тест скрытия/подтверждения RED→GREEN; vitest 63/63, build, prettier --check src, cargo test PASS (cargo вне sandbox из-за Unix-сокета).
+Task 15: Ruling: добавлены vault-unlocked и session-activity между окнами — иначе вход из трея не обновляет главное окно, а скрытый трей блокирует активную сессию своим таймером — цена ошибки: лишние события и рассинхронизация таймеров до 500 мс.
+Task 15: Ruling: нативная визуальная проверка трея отложена — в доступных инструментах нет управления окном/снимка macOS; автоматические Rust/TS проверки выполнены — цена ошибки: положение и закрытие окна требуют ручной проверки на Mac.
+Task 15: automated complete — recent RED→GREEN; shared activity RED→GREEN; vitest 64/64, build, prettier --check src, cargo test PASS; native smoke pending.
+Task 16: Ruling: визуальный обход светлой/тёмной темы и системного reduced-motion остаётся ручным — нет browser/computer инструмента для такого обхода — цена ошибки: визуальные регрессии могут остаться; автоматические тесты и численный контраст не заменяют обход.
+Task 16: automated complete — vitest 64/64, build, prettier --check src, cargo test PASS; contrast light background/card 5.31/5.55, dark 6.84/6.24; README updated; visual smoke pending.
+
+Backup/import pre-flight: T1 BackupHeader → T2 export/T3 inspect/restore; T4 LoginDraft → T6 commands/T7 UI; T5 OtpDraft → T6 token cache/T7 UI; T6 Imported → T7 report. Interfaces consistent; header.objects counts archive entries.
+Task 1: Ruling: backup/import — после валидационного open_with_seed удаляется временный device.json перед rename — иначе проверочное открытие нарушает тест отсутствия device.json до первого открытия — цена ошибки: новый peer создаётся ещё раз при первом рабочем открытии.
+Task 1: backup/import automated complete — 7 backup tests RED→GREEN, cargo test PASS, vitest 64/64, build, prettier --check src PASS.
+Task 2: Ruling: backup/import — системное подтверждение присутствия происходит после выбора пути, перед записью — интерфейс export_backup(path,pin) выполняет проверку и запись атомарно; отдельная авторизация до диалога потребовала бы токенов или повторного запроса — цена ошибки: порядок двух диалогов отличается от макета.
+Task 2: backup/import automated complete — export presence/file/settings tests RED→GREEN; backupReminder RED→GREEN; vitest 65/65, build, prettier --check src, cargo test PASS. Markdown export remains in TransferSection until Task 7 moves its import forms.
+Task 3: Ruling: backup/import — реальный цикл через tauri dev и удаление пользовательской базы не выполнялся — нет GUI-инструмента, а удалять текущую базу для теста недопустимо; цикл покрыт изолированными Rust-тестами — цена ошибки: системный диалог и drag-and-drop требуют ручного smoke-теста.
+Task 3: automated complete — 3 restore tests RED→GREEN, cargo test PASS, vitest 65/65, build, prettier --check src PASS; native smoke pending.
+Task 4: Ruling: backup/import — вместо cargo test -p crypt-core import_csv import_apply используется фильтр import_ — cargo принимает только один позиционный фильтр; он охватывает оба модуля — цена ошибки: дополнительно запускаются другие import-тесты.
+Task 4: backup/import complete — CSV/import_apply 5 tests RED→GREEN; cargo test PASS, vitest 65/65, build, prettier --check src PASS.
+Task 4: Ruling: backup/import — коммит 691c52e создан до завершения полного cargo test, хотя проверки уже шли; итоговый процесс затем завершился PASS — ошибка порядка исполнения, не считать предварительный статус доказательством — цена ошибки: коммит мог содержать регрессию до окончания прогона.
+Task 5: Ruling: backup/import — используется существующий TotpAlg вместо отсутствующего TotpAlgorithm; зависимости импорта включены в существующую desktop-фичу fs; qrcode только dev для синтетических PNG — совместимость с ядром/wasm и воспроизводимые образцы — цена ошибки: desktop fs включает дополнительные зависимости.
+Task 5: backup/import complete — OTP tests RED→GREEN, repeated target regression RED→GREEN, synthetic PNG/Aegis fixtures generated explicitly; cargo test PASS, vitest 65/65, build, prettier --check src PASS.
+Task 6: Ruling: backup/import — вставка QR из буфера не реализована, кнопка скрыта; доступны несколько PNG/JPEG — план явно разрешает этот вариант без arboard — цена ошибки: скриншот надо сохранить/выбрать файлом.
+Task 6: Ruling: backup/import — pending OTP хранит Instant, отчёт пропущенного и generation сверх token/drafts; TTL 5 минут, отмена инвалидирует поздний preview — нужен тест просроченного токена и гарантированная очистка после lock/cancel — цена ошибки: после пяти минут нужно повторить предпросмотр.
+Task 6: backup/import complete — 3 command tests RED→GREEN (snapshot, one-use/expired/wrong token, lock/cancel/late preview); cargo test PASS, vitest 65/65, build, prettier --check src PASS. trash_file uses NSFileManager, no new runtime dependency.
+Task 7: Ruling: backup/import — тексты инструкций и компоновка восстановлены по спецификации и официальным справкам браузеров, прежние формы вынесены в LegacyImport — Claude artifact недоступен через web, готового HTML в репозитории нет — цена ошибки: буквальные тексты/отступы могут отличаться от холста.
+Task 7: Ruling: backup/import — обход браузерных веток проверяется mount-тестами с заглушками вместо визуального pnpm dev — нет browser/computer-инструмента; CSV, Aegis и отмена/lock покрыты действиями пользователя — цена ошибки: визуальные и нативные ветки остаются для ручного smoke.
+Task 7: backup/import automated complete — importSources 2 tests RED→GREEN, cancellation ordering regression RED→GREEN; 4 wizard action tests PASS; cargo test PASS, vitest 71/71, build, prettier --check src PASS; visual/native smoke pending.
+Task 8: Ruling: backup/import — реальный ручной импорт Safari/Chrome, двух QR Google Authenticator, зашифрованного Aegis и нативный цикл восстановления остаются непроверенными — нет GUI-инструмента и пользовательских экспортов; используются синтетические fixture и Rust/UI тесты — цена ошибки: отличия реальных файлов и системных диалогов требуют проверки владельцем.
+Task 8: backup/import automated complete — README documents backup/import in 4 lines and updates SSH entry; cargo test PASS, vitest 71/71, build, prettier --check src PASS. Native/real-export smoke pending; whole-branch review follows.
+Task 8: Ruling: итоговое ревью — исправления PIN-профиля и отчёта CSV с нулём новых записей повышены с Minor до Important — числовой профиль выдавал неподходящие PIN, а причины всех пропусков нельзя было увидеть — цена ошибки: немного расширен обязательный проход исправлений.
+Task 15: Ruling: итоговое ревью — все UI-блокировки проходят через Rust с main-only flush/ack и одноразовым токеном; единственный idle timer в main, tray получает отсчёт событиями — два окна иначе теряли несохранённые правки и расходились в интервале — цена ошибки: при недоступном main сохранён прежний таймаут 500 мс.
+Task 5: Ruling: итоговое ревью — бренд issuer сравнивается с базовой меткой домена, а не любой меткой поддомена; явный issuer-домен требует полного совпадения/его поддомена — иначе личный GitHub-код попадал в github.company.com — цена ошибки: консервативное сопоставление может создать отдельный секрет вместо прикрепления.
+Task 6: Ruling: итоговое ревью — снимок сохраняется при изменении CRDT-ревизий, но восстановление снимков по-прежнему не меняет значения секретов — существующий revert_record явно сохраняет ключи; спецификация допускает ограничения прежнего механизма — цена ошибки: частично добавленные TOTP нужно убрать вручную, снимок их не удаляет.
+Final: minor (deferred): Generator.vue — поздний ответ генерации может вновь заполнить refs после очистки/размонтирования; видимого раскрытия на экране блокировки не подтверждено.
+Task 8: Ruling: итоговое ревью — нативное положение/фокус трея, диалоги, Touch ID, Finder/Trash и визуальное соответствие не оценены — нет GUI-инструмента — цена ошибки: требуется ручной smoke на Mac.
+Task 8: Ruling: итоговое ревью — совместимость с реальными экспортами не подтверждена сверх синтетических fixtures — пользовательских файлов нет — цена ошибки: отличия версий экспортёров могут потребовать доработки.
+Task 8: Ruling: итоговое ревью — исчерпывающие ресурсные атаки на парсеры и форензика освобождённой heap-памяти не доказаны — лимиты и Zeroizing проверены по коду, это не полный аудит зависимостей — цена ошибки: остаточные DoS/копии в памяти библиотек возможны.
+Task 16: Ruling: итоговое ревью — качество бинарных иконок и весь EFF-словарь не оценены вручную — ревью сосредоточено на коде и путях безопасности — цена ошибки: визуальные дефекты и ошибки отдельных слов могут остаться.
+Task 3: Ruling: итоговая сверка — inspect_backup дополнительно возвращает bytes рядом с полями BackupHeader — шаг UI требует размер файла, которого в исходном интерфейсе заголовка нет — цена ошибки: добавлено обратно совместимое поле ответа.
+Task 2: Ruling: итоговая сверка — прогресс экспорта/восстановления неопределённый, с текстом текущей операции, без выдуманного процента — команды возвращают единый итог и не имеют контракта событий прогресса — цена ошибки: точный процент при больших базах недоступен.
+Final: independent whole-branch review 1134712..c7bd587 by whole_branch_review; 5 Important fixed; PIN-profile and all-skipped CSV findings regraded Important and fixed; one Minor deferred. No merge/push.
+Final: fixed main-only lock acknowledgement/token and backend-coordinated UI lock — tray_cannot_acknowledge_main_editor_flush, session-coordination RED→GREEN.
+Final: fixed competing idle timers — tray never owns an idle timer RED→GREEN; countdown/activity shared from main.
+Final: fixed lost rollback snapshot — failed_attachment_keeps_snapshot_even_with_unchanged_record_count RED→GREEN; existing secret-preserving restore contract asserted.
+Final: fixed unimported-file trash — native two-CSV drop regression RED→GREEN.
+Final: fixed OTP service identity — personal_github_does_not_attach_to_enterprise_subdomain RED→GREEN.
+Final: fixed named PIN overrides and all-skipped CSV report — generatorProfiles/import-actions regressions RED→GREEN.
+Final: inspection_reports_actual_file_size_without_unpacking RED→GREEN.
+Final: full verification PASS — cargo test: 159 passed, 0 failed, 1 ignored fixture generator (run explicitly earlier); pnpm vitest run: 76 passed; pnpm build PASS; pnpm prettier --check src PASS; git diff --check PASS. Native/visual/real-export checks remain pending.

@@ -5,7 +5,7 @@ import { Copy } from '@lucide/vue'
 import { api } from '@/lib/api'
 import type { TotpCode as Code } from '@/lib/types'
 import { useSession } from '@/stores/session'
-const props = defineProps<{ recordId: string }>(),
+const props = defineProps<{ recordId: string; compact?: boolean }>(),
   code = ref<Code | null>(null)
 let active = true,
   request = 0,
@@ -47,7 +47,7 @@ async function copy() {
   try {
     await api.copyTotp(props.recordId)
     const settings = await api.getSettings()
-    toast(`Код скопирован, буфер очистится через ${settings.clipboardClearSeconds} с`)
+    toast.success(`Код скопирован · очистится через ${settings.clipboardClearSeconds} с`)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'Не удалось скопировать код')
   }
@@ -56,28 +56,41 @@ async function copy() {
 <template>
   <button
     v-if="code"
-    class="flex w-full items-center gap-3 rounded-lg border bg-secret/5 p-3 text-left"
+    class="bg-background hover:bg-foreground/[.03] flex w-full items-center gap-4 rounded-xl border p-4 text-left transition-colors active:scale-[.99]"
+    :class="compact ? '!gap-2 !p-2' : ''"
     aria-label="Копировать код TOTP"
     @click="copy"
   >
-    <svg class="size-9 -rotate-90 text-secret" viewBox="0 0 36 36" aria-hidden="true">
-      <circle cx="18" cy="18" r="14" fill="none" stroke="currentColor" stroke-width="2" opacity=".2" />
+    <svg :class="compact ? 'size-6 -rotate-90' : 'size-11 -rotate-90'" viewBox="0 0 44 44" aria-hidden="true">
+      <circle cx="22" cy="22" r="18" fill="none" class="stroke-muted" stroke-width="4" />
       <circle
-        cx="18"
-        cy="18"
-        r="14"
+        cx="22"
+        cy="22"
+        r="18"
         fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-dasharray="88"
-        :stroke-dashoffset="88 * (1 - code.remaining / code.period)"
+        stroke-width="4"
+        stroke-linecap="round"
+        stroke-dasharray="113.1"
+        class="totp-ring"
+        :class="code.remaining <= 5 ? 'stroke-secret' : 'stroke-primary'"
+        :stroke-dashoffset="113.1 * (1 - code.remaining / code.period)"
       /></svg
     ><span class="flex-1"
-      ><span class="block text-xs text-muted-foreground">Одноразовый код</span
-      ><span class="font-mono text-xl tracking-wider text-secret">{{
-        code.code.replace(/(.{3})(?=.)/g, '$1 ')
-      }}</span></span
-    ><span class="text-xs text-muted-foreground">{{ code.remaining }} с</span
-    ><Copy class="size-4 text-muted-foreground" />
+      ><span class="text-muted-foreground block text-xs">Одноразовый код · {{ code.remaining }} с</span
+      ><span
+        :key="code.code"
+        class="anim-in block font-mono font-semibold tracking-[.06em]"
+        :class="compact ? 'text-sm' : 'text-[26px]'"
+        >{{ code.code.replace(/(.{3})(?=.)/g, '$1 ') }}</span
+      ></span
+    ><span class="text-muted-foreground flex items-center gap-1.5 text-xs"><Copy class="size-4" /> Скопировать</span>
   </button>
 </template>
+
+<style scoped>
+.totp-ring {
+  transition:
+    stroke-dashoffset 1s linear,
+    stroke 0.3s ease;
+}
+</style>

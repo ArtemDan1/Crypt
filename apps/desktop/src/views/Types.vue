@@ -10,6 +10,9 @@ import PageHeader from '@/components/PageHeader.vue'
 import { api, CryptApiError } from '@/lib/api'
 import { debouncedSaver } from '@/lib/debounce'
 import { OPTION_COLORS, optionClass } from '@/lib/fields'
+import { FIELD_KINDS, kindMeta } from '@/lib/fieldKinds'
+import KindTile from '@/components/crypt/KindTile.vue'
+import { toneForType } from '@/lib/tones'
 import { TYPE_ICONS, typeIcon } from '@/lib/icons'
 import type { FieldDef, FieldKind, FieldKindName, TypeDef } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
@@ -36,18 +39,19 @@ const ulid = () => {
 // Vue proxies cannot go through structuredClone.
 const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x))
 
-const KINDS: { kind: FieldKindName; label: string; glyph: string }[] = [
-  { kind: 'Text', label: 'Текст', glyph: 'T' },
-  { kind: 'Number', label: 'Число', glyph: '#' },
-  { kind: 'Date', label: 'Дата', glyph: '▦' },
-  { kind: 'Select', label: 'Выбор', glyph: '◉' },
-  { kind: 'MultiSelect', label: 'Мультивыбор', glyph: '☰' },
-  { kind: 'Checkbox', label: 'Флажок', glyph: '☑' },
-  { kind: 'Url', label: 'URL', glyph: '↗' },
-  { kind: 'RecordLink', label: 'Ссылка на запись', glyph: '→' },
-  { kind: 'SecretLink', label: 'Секрет', glyph: '✱' },
-]
-const kindMeta = (k: FieldKindName) => KINDS.find((x) => x.kind === k)!
+const KINDS = FIELD_KINDS
+const freshField = ref<string | null>(null)
+const SAMPLE: Partial<Record<FieldKindName, string>> = {
+  Text: 'Фрэнк Герберт',
+  Number: '5',
+  Date: '12 сентября',
+  Url: 'example.com',
+  Checkbox: 'Да',
+  Select: 'Читаю',
+  MultiSelect: 'Фантастика, Классика',
+  RecordLink: 'Пикник на обочине',
+  SecretLink: '•••• секрет',
+}
 
 function makeKind(k: FieldKindName): FieldKind {
   if (k === 'Select' || k === 'MultiSelect') return { kind: k, value: { options: [] } }
@@ -111,7 +115,10 @@ onMounted(async () => {
 
 function addField(k: FieldKindName) {
   if (!draft.value) return
-  draft.value.fields.push({ id: ulid(), name: kindMeta(k).label, kind: makeKind(k) })
+  const id = ulid()
+  draft.value.fields.push({ id, name: kindMeta(k).label, kind: makeKind(k) })
+  freshField.value = id
+  setTimeout(() => freshField.value === id && (freshField.value = null), 900)
   addOpen.value = false
   save()
 }
@@ -175,18 +182,16 @@ async function addStarter() {
     </PageHeader>
 
     <div class="flex min-h-0 flex-1">
-      <section aria-label="Список типов" class="bg-card/30 w-60 shrink-0 overflow-auto border-r p-2">
+      <section aria-label="Список типов" class="w-56 shrink-0 overflow-auto border-r px-2.5 py-4">
         <RouterLink
           v-for="t in lib.types"
           :key="t.id"
           :to="`/types/${t.id}`"
-          class="flex h-10 items-center gap-2.5 rounded-lg px-2.5"
-          :class="t.id === selectedId ? 'bg-accent' : 'hover:bg-accent/60'"
+          class="flex h-9 items-center gap-2.5 rounded-lg px-2.5 transition-colors"
+          :class="t.id === selectedId ? 'bg-accent font-semibold' : 'hover:bg-foreground/[.05] font-medium'"
         >
-          <span class="bg-muted flex size-[26px] items-center justify-center rounded-md"
-            ><component :is="typeIcon(t.icon)" class="size-4"
-          /></span>
-          <span class="flex-1 truncate font-medium">{{ t.name }}</span>
+          <KindTile :icon="typeIcon(t.icon)" :tone="toneForType(lib.types, t.id)" />
+          <span class="flex-1 truncate text-[14px]">{{ t.name }}</span>
           <span class="text-muted-foreground text-xs">{{ lib.countByType.get(t.id) || '' }}</span>
         </RouterLink>
         <button
@@ -198,16 +203,18 @@ async function addStarter() {
         </button>
       </section>
 
-      <main v-if="draft" class="min-w-0 flex-1 overflow-auto px-10 py-7">
-        <div class="mx-auto max-w-[760px]">
+      <main v-if="draft" class="flex min-w-0 flex-1">
+        <div :key="draft.id" class="anim-in min-w-0 flex-1 overflow-auto px-9 py-8">
           <div class="flex flex-wrap items-center gap-3.5">
             <Popover>
               <PopoverTrigger as-child>
-                <button
-                  aria-label="Иконка типа"
-                  class="bg-card hover:bg-accent flex size-12 items-center justify-center rounded-xl border"
-                >
-                  <component :is="typeIcon(draft.icon)" class="size-6" />
+                <button aria-label="Иконка типа" class="transition-transform hover:scale-105 active:scale-95">
+                  <KindTile
+                    :icon="typeIcon(draft.icon)"
+                    :tone="toneForType(lib.types, draft.id)"
+                    size="lg"
+                    class="size-[52px]! rounded-[14px]! [&_svg]:size-6!"
+                  />
                 </button>
               </PopoverTrigger>
               <PopoverContent align="start" class="grid w-[264px] grid-cols-6 gap-1 p-2">
@@ -228,7 +235,7 @@ async function addStarter() {
               <input
                 id="tname"
                 v-model="draft.name"
-                class="w-full bg-transparent text-[26px] font-semibold outline-none"
+                class="w-full bg-transparent text-[28px] font-semibold tracking-[-.02em] outline-none"
                 @input="save"
               />
             </div>
@@ -240,28 +247,31 @@ async function addStarter() {
             </RouterLink>
           </div>
 
-          <h3 class="text-muted-foreground mt-7 mb-2.5 text-[13px] font-medium">Поля</h3>
-          <div class="overflow-hidden rounded-xl border">
+          <div class="mt-7 mb-2.5 flex items-center justify-between">
+            <h3 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Поля</h3>
+            <span class="text-muted-foreground text-xs">Перетащите, чтобы поменять порядок</span>
+          </div>
+          <div class="flex flex-col gap-1.5">
             <div
               v-for="(f, i) in draft.fields"
               :key="f.id"
-              class="border-b last:border-b-0"
-              :class="dragFrom === i && 'opacity-50'"
+              class="group/f bg-card rounded-[11px] border transition-shadow hover:shadow-[0_6px_18px_-12px_rgba(0,0,0,.3)]"
+              :class="[dragFrom === i && 'opacity-50', freshField === f.id && 'anim-fresh']"
               @dragover.prevent
               @drop="onDrop(i)"
             >
-              <div class="flex min-h-12 items-center gap-3 px-3">
+              <div class="flex min-h-12 items-center gap-2.5 pr-2.5 pl-1.5">
                 <span
                   draggable="true"
-                  class="text-muted-foreground cursor-grab"
+                  class="text-muted-foreground/60 hover:text-muted-foreground cursor-grab"
                   aria-label="Перетащить"
                   @dragstart="dragFrom = i"
                 >
                   <GripVertical class="size-4" />
                 </span>
                 <span
-                  class="bg-muted flex size-[26px] shrink-0 items-center justify-center rounded-md text-[13px]"
-                  :class="f.kind.kind === 'SecretLink' ? 'text-secret' : 'text-foreground/80'"
+                  class="flex size-7 shrink-0 items-center justify-center rounded-[7px] font-mono text-xs font-medium"
+                  :class="f.kind.kind === 'SecretLink' ? 'bg-secret-bg text-secret-fg' : 'bg-accent text-foreground-2'"
                   >{{ kindMeta(f.kind.kind).glyph }}</span
                 >
                 <input
@@ -289,7 +299,7 @@ async function addStarter() {
                   <Switch v-model="f.kind.value.multiple" size="sm" @update:model-value="save" /> несколько
                 </label>
                 <button
-                  class="text-muted-foreground hover:text-destructive rounded p-1"
+                  class="text-muted-foreground hover:text-destructive hover:bg-foreground/[.06] rounded-md p-1.5 opacity-0 transition group-hover/f:opacity-100 focus-visible:opacity-100"
                   :aria-label="`Удалить поле ${f.name}`"
                   @click="removeField(f)"
                 >
@@ -298,7 +308,7 @@ async function addStarter() {
               </div>
               <div
                 v-if="f.kind.kind === 'Select' || f.kind.kind === 'MultiSelect'"
-                class="flex flex-wrap items-center gap-1.5 px-12 pb-3"
+                class="flex flex-wrap items-center gap-1.5 pb-3 pl-[66px]"
               >
                 <span
                   v-for="o in f.kind.value.options"
@@ -325,42 +335,53 @@ async function addStarter() {
                     <X class="size-3" />
                   </button>
                 </span>
-                <button class="text-muted-foreground hover:text-foreground text-xs" @click="addOption(f)">
+                <button
+                  class="text-muted-foreground hover:text-foreground border-border-strong h-6 rounded-md border border-dashed px-2 text-xs"
+                  @click="addOption(f)"
+                >
                   + вариант
                 </button>
               </div>
             </div>
-            <div class="p-2.5">
+            <div class="pt-1">
               <Popover v-model:open="addOpen">
                 <PopoverTrigger as-child>
-                  <Button variant="secondary" size="sm"><Plus class="size-4" /> Добавить поле</Button>
+                  <button
+                    class="border-border-strong text-foreground-2 hover:bg-foreground/[.04] aria-expanded:bg-accent flex h-[38px] items-center gap-2 rounded-[9px] border border-dashed px-3.5 text-[13px] font-medium transition-colors"
+                  >
+                    <Plus class="size-3.5" :stroke-width="2.4" /> Добавить поле
+                  </button>
                 </PopoverTrigger>
-                <PopoverContent align="start" class="w-64 p-1.5">
-                  <div class="text-muted-foreground px-2 py-1 text-[11px] tracking-wider uppercase">Вид поля</div>
+                <PopoverContent align="start" class="grid w-[420px] grid-cols-3 gap-1.5 p-3">
                   <button
                     v-for="k in KINDS"
                     :key="k.kind"
-                    class="hover:bg-accent flex h-8 w-full items-center gap-2.5 rounded-md px-2 text-[13px]"
+                    class="bg-background hover:border-primary/50 flex flex-col items-start gap-2 rounded-[10px] border p-2.5 text-left transition-[transform,border-color] duration-200 ease-[cubic-bezier(.3,1.4,.5,1)] hover:-translate-y-0.5"
                     @click="addField(k.kind)"
                   >
                     <span
-                      class="w-[18px] text-center"
-                      :class="k.kind === 'SecretLink' ? 'text-secret' : 'text-muted-foreground'"
+                      class="flex size-[26px] items-center justify-center rounded-[7px] font-mono text-xs"
+                      :class="k.kind === 'SecretLink' ? 'bg-secret-bg text-secret-fg' : 'bg-accent text-foreground-2'"
                       >{{ k.glyph }}</span
                     >
-                    {{ k.label }}
+                    <span class="text-[13px] font-medium">{{ k.label }}</span>
                   </button>
                 </PopoverContent>
               </Popover>
             </div>
           </div>
 
-          <div class="mt-8 flex items-center gap-3 border-t pt-5">
+          <div class="border-destructive/30 mt-8 flex items-center gap-3 rounded-xl border px-4 py-3.5">
+            <span class="flex flex-1 flex-col gap-0.5">
+              <span class="text-[14px] font-medium">Удалить тип</span>
+              <span class="text-muted-foreground text-xs">{{
+                recordCount > 0
+                  ? `Сначала смените тип или удалите записи этого типа (${recordCount})`
+                  : 'Записей этого типа нет, тип можно удалить'
+              }}</span>
+            </span>
             <Button variant="outline" size="sm" class="text-destructive" :disabled="recordCount > 0" @click="deleteType"
-              >Удалить тип</Button
-            >
-            <span v-if="recordCount > 0" class="text-muted-foreground text-xs"
-              >Сначала смените тип или удалите записи этого типа ({{ recordCount }})</span
+              >Удалить</Button
             >
           </div>
           <p class="text-muted-foreground mt-4 flex items-center gap-1.5 text-xs">
@@ -368,6 +389,35 @@ async function addStarter() {
             не показывается в карточке.
           </p>
         </div>
+        <aside
+          aria-label="Предпросмотр записи"
+          class="bg-background hidden w-[300px] shrink-0 flex-col gap-3 border-l px-5 py-7 xl:flex"
+        >
+          <span class="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase"
+            >Так выглядит запись</span
+          >
+          <div
+            class="bg-card flex flex-col gap-3 rounded-[14px] border p-[18px] shadow-[0_10px_30px_-20px_rgba(0,0,0,.25)]"
+          >
+            <span
+              class="bg-primary-soft text-primary-soft-fg inline-flex h-[22px] items-center self-start rounded-md px-2 text-[11px] font-medium"
+              >{{ draft.name || 'Без названия' }}</span
+            >
+            <span class="text-[19px] font-semibold tracking-[-.01em]">Пример записи</span>
+            <TransitionGroup tag="div" name="pv" class="flex flex-col gap-2">
+              <div
+                v-for="f in draft.fields"
+                :key="f.id"
+                class="grid grid-cols-[90px_minmax(0,1fr)] items-center gap-2 text-xs"
+              >
+                <span class="text-muted-foreground truncate">{{ f.name }}</span>
+                <span class="truncate" :class="f.kind.kind === 'SecretLink' && 'text-secret-fg'">{{
+                  SAMPLE[f.kind.kind] ?? '—'
+                }}</span>
+              </div>
+            </TransitionGroup>
+          </div>
+        </aside>
       </main>
       <div v-else class="text-muted-foreground flex flex-1 items-center justify-center text-[13px]">
         Создайте первый тип
@@ -375,3 +425,15 @@ async function addStarter() {
     </div>
   </div>
 </template>
+
+<style scoped>
+.pv-enter-active {
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
+}
+.pv-enter-from {
+  opacity: 0;
+  transform: translateX(6px);
+}
+</style>

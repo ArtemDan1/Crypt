@@ -54,7 +54,9 @@ pub fn install(st: &AppState, vault: Vault) -> VaultStatus {
     let vault_id = vault.vault_id().to_string();
     *st.vault_guard() = Some(vault);
     crate::agent::cache::refresh(st);
-    VaultStatus::Unlocked { vault_id }
+    let result = VaultStatus::Unlocked { vault_id };
+    st.emit("vault-unlocked", result.clone());
+    result
 }
 
 pub fn create_vault(st: &AppState, words: Vec<String>) -> ApiResult<VaultStatus> {
@@ -73,8 +75,11 @@ pub fn unlock_with_seed(st: &AppState, words: Vec<String>) -> ApiResult<VaultSta
 
 pub fn lock(st: &AppState) -> VaultStatus {
     st.agent.policy.clear_trust();
-    if let Some(v) = st.vault_guard().take() {
-        v.lock();
+    {
+        let mut guard = st.vault_guard();
+        if let Some(v) = guard.take() { v.lock(); }
+        st.recent.clear();
+        crate::commands::transfer::cancel_pending(st);
     }
     let status = status(st);
     st.emit("vault-locked", status.clone());
@@ -186,6 +191,16 @@ pub fn set_settings_with_effects(
 }
 
 pub mod cmd {
+    #[tauri::command]
+    pub fn show(app: tauri::AppHandle) { crate::tray::show(&app); }
+    #[tauri::command]
+    pub fn tray_hide(app: tauri::AppHandle) {
+        use tauri::Manager;
+        if let Some(w) = app.get_webview_window("tray") { let _ = w.hide(); }
+    }
+    #[tauri::command]
+    pub fn app_quit(app: tauri::AppHandle) { app.exit(0); }
+
     use super::*;
 
     #[tauri::command]
@@ -234,8 +249,8 @@ pub mod cmd {
         super::unlock_with_seed(&st, words)
     }
     #[tauri::command]
-    pub fn lock(st: State<'_, std::sync::Arc<AppState>>) -> VaultStatus {
-        super::lock(&st)
+    pub async fn lock(app: tauri::AppHandle) -> ApiResult<VaultStatus> {
+        tauri::async_runtime::spawn_blocking(move || crate::autolock::lock_with_flush(&app)).await.map_err(|_|ApiError::new("Internal","Внутренняя ошибка"))
     }
     #[tauri::command]
     pub fn vault_path(st: State<'_, std::sync::Arc<AppState>>) -> String {

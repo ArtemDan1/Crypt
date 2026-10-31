@@ -7,6 +7,7 @@ pub mod error;
 pub mod ssh_config;
 pub mod state;
 pub mod tray;
+pub mod recent;
 pub mod unlock;
 
 use commands::library as lib_cmd;
@@ -55,17 +56,32 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::transfer::preview_browser_csv,
+            commands::transfer::import_browser_csv,
+            commands::transfer::preview_otp,
+            commands::transfer::import_otp,
+            commands::transfer::cancel_otp_import,
+            commands::transfer::trash_file,
+            commands::backup::export_backup,
+            commands::backup::inspect_backup,
+            commands::backup::restore_backup,
             ssh_config::ssh_config_status,
             ssh_config::configure_ssh_config,
             ssh_config::unconfigure_ssh_config,
             commands::secrets::cmd::secret_overview,
             commands::secrets::cmd::reveal_secret,
             commands::secrets::cmd::copy_secret,
+            commands::secrets::cmd::recent_secrets,
+            lifecycle::show,
+            lifecycle::tray_hide,
+            lifecycle::app_quit,
             commands::secrets::cmd::set_secret,
             commands::secrets::cmd::secret_history,
             commands::secrets::cmd::reveal_secret_revision,
             commands::secrets::cmd::copy_secret_revision,
             commands::secrets::cmd::generate_password,
+            commands::secrets::cmd::generate_passwords,
+            commands::secrets::cmd::copy_text,
             commands::secrets::cmd::totp_now,
             commands::secrets::cmd::copy_totp,
             commands::secrets::cmd::set_ssh_key,
@@ -93,6 +109,8 @@ pub fn run() {
             unlock_cmd::remove_pin,
             unlock_cmd::unlock_pin,
             unlock_cmd::reveal_seed,
+            lib_cmd::vault_name,
+            lib_cmd::rename_vault,
             lib_cmd::list_types,
             lib_cmd::put_type,
             lib_cmd::delete_type,
@@ -117,6 +135,7 @@ pub fn run() {
             lib_cmd::remove_tag,
             lib_cmd::set_field,
             lib_cmd::delete_record,
+            lib_cmd::delete_records,
             lib_cmd::restore_record,
             lib_cmd::purge_record,
             lib_cmd::empty_trash,

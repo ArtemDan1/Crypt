@@ -11,6 +11,7 @@ export interface UnlockMethods {
 }
 
 export interface Settings {
+  lastBackupAt: number | null
   autolockMinutes: number
   clipboardClearSeconds: number
   agentEnabled: boolean
@@ -99,6 +100,8 @@ export interface RecordSummary {
   folder: Id | null
   tags: string[]
   secret_kind: SecretKind | null
+  /** Login username, for lists and search. */
+  username?: string | null
   updated_at: number
 }
 
@@ -146,12 +149,29 @@ export interface TotpCode {
   period: number
 }
 export interface PasswordOptions {
+  mode?: 'chars' | 'words'
   length: number
   lower: boolean
   upper: boolean
   digits: boolean
   symbols: boolean
   avoidAmbiguous: boolean
+  minus?: boolean
+  underline?: boolean
+  space?: boolean
+  brackets?: boolean
+  latin1?: boolean
+  eachClass?: boolean
+  include?: string
+  exclude?: string
+  words?: number
+  separator?: string
+  capitalize?: boolean
+  addNumber?: boolean
+}
+export interface GeneratedPassword {
+  value: string
+  bits: number
 }
 export interface SecretRevisionMeta {
   index: number
@@ -204,6 +224,8 @@ export interface SnapshotRestoreReport {
   restored: number
   trashed: number
   missing: number
+  /** Secrets imported after the snapshot and never edited, removed for good. */
+  removed: number
 }
 
 export interface Imported<T> {
@@ -229,4 +251,52 @@ export interface ExportReport {
   path: string
   notes: number
   secrets: number
+}
+
+export interface BackupHeader {
+  version: number
+  created_at: number
+  objects: number
+}
+export interface BackupExport {
+  path: string
+  bytes: number
+  header: BackupHeader
+}
+
+export type OtpSkip = 'Hotp' | 'BadSecret' | 'Unsupported'
+export type CsvSkip = 'NoPassword' | 'BadRow' | 'BadTotp'
+export type OtpSource =
+  | { kind: 'images'; paths: string[] }
+  | { kind: 'clipboardImage' }
+  | { kind: 'aegis'; path: string; password?: string }
+  | { kind: 'twofas'; path: string }
+export interface BrowserPreview {
+  skippedDetails: [number, CsvSkip][]
+  format: 'chromium' | 'safari' | 'firefox'
+  new: number
+  duplicates: number
+  skipped: number
+  sample: [string, string][]
+}
+export interface LoginImportReport {
+  imported: number
+  duplicates: number
+  skipped: [number, CsvSkip][]
+}
+export interface OtpPreview {
+  token: string
+  rows: { issuer: string; account: string; target: { attach: string } | 'new' }[]
+  skipped: [string, OtpSkip][]
+  missingBatches: [number, number][]
+}
+export interface OtpImportReport {
+  attached: number
+  created: number
+  skipped: [string, OtpSkip][]
+  missing_batches: [number, number][]
+}
+
+export interface BackupInspection extends BackupHeader {
+  bytes: number
 }

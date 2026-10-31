@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { api } from '@/lib/api'
 import { useRevealTimer } from '@/lib/reveal'
 import type { PasswordOptions } from '@/lib/types'
+const props = defineProps<{ disabled?: boolean }>()
 const emit = defineEmits<{ use: [value: string] }>()
 const defaults: PasswordOptions = {
   length: 24,
@@ -77,7 +78,14 @@ const classes = [
 ] as const
 </script>
 <template>
-  <Popover v-model:open="open"
+  <span
+    v-if="props.disabled"
+    class="inline-flex"
+    title="Пароль уже задан. Чтобы сгенерировать новый, сначала очистите поле — так старый не затрётся случайно"
+    ><Button variant="ghost" size="sm" aria-label="Генератор пароля недоступен: пароль уже задан" disabled
+      ><WandSparkles class="size-4" /></Button
+  ></span>
+  <Popover v-else v-model:open="open"
     ><PopoverTrigger as-child
       ><Button variant="ghost" size="sm" aria-label="Генератор пароля"
         ><WandSparkles class="size-4 text-secret" /></Button></PopoverTrigger
@@ -112,7 +120,6 @@ const classes = [
         /></label>
       </div>
       <label class="flex items-center justify-between text-xs"
-        >Без похожих 0O1lI<Switch v-model="options.avoidAmbiguous"
-      /></label></PopoverContent
+        >Без похожих 0O1lI<Switch v-model="options.avoidAmbiguous" /></label></PopoverContent
   ></Popover>
 </template>

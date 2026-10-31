@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { Check } from '@lucide/vue'
+import { Check, Copy } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
@@ -12,6 +12,14 @@ const props = defineProps<{ field: FieldDef; value?: FieldValue; recordId?: Id; 
 const emit = defineEmits<{ change: [v: FieldValue | null]; done: [] }>()
 
 const draft = ref(inputValue(props.value))
+async function copyValue() {
+  try {
+    await navigator.clipboard.writeText(draft.value)
+    toast.success(`${props.field.name}: скопировано`)
+  } catch {
+    toast.error('Не удалось скопировать')
+  }
+}
 const textInput = ref<HTMLInputElement | null>(null)
 // `autofocus` only works on page load; focus explicitly when mounted inside a table cell.
 onMounted(async () => {
@@ -59,26 +67,36 @@ function toggleOption(id: Id) {
 </script>
 
 <template>
-  <input
-    v-if="isText"
-    ref="textInput"
-    v-model="draft"
-    class="hover:bg-accent/50 focus:bg-accent/50 h-[30px] w-full rounded-md bg-transparent px-2 outline-none"
-    :class="kind.kind !== 'Text' && 'font-mono text-[13px]'"
-    :inputmode="kind.kind === 'Number' ? 'decimal' : undefined"
-    :aria-label="field.name"
-    placeholder="Пусто"
-    @keydown.enter.prevent="commitText"
-    @keydown.esc="cancel"
-    @blur="commitText"
-  />
+  <div v-if="isText" class="group/field relative flex items-center">
+    <input
+      ref="textInput"
+      v-model="draft"
+      class="hover:bg-foreground/[.04] focus:bg-foreground/[.04] h-[34px] w-full rounded-lg bg-transparent px-2 pr-9 transition-colors outline-none"
+      :class="kind.kind !== 'Text' && 'font-mono text-[13px]'"
+      :inputmode="kind.kind === 'Number' ? 'decimal' : undefined"
+      :aria-label="field.name"
+      placeholder="Пусто"
+      @keydown.enter.prevent="commitText"
+      @keydown.esc="cancel"
+      @blur="commitText"
+    />
+    <button
+      v-if="draft && (kind.kind === 'Text' || kind.kind === 'Url')"
+      type="button"
+      class="text-muted-foreground hover:bg-foreground/[.08] absolute right-1 flex size-7 items-center justify-center rounded-md opacity-0 transition-opacity group-hover/field:opacity-100 focus-visible:opacity-100"
+      :aria-label="`Скопировать ${field.name}`"
+      @click="copyValue"
+    >
+      <Copy class="size-3.5" />
+    </button>
+  </div>
   <input
     v-else-if="kind.kind === 'Date'"
     ref="textInput"
     v-model="draft"
     type="date"
     :aria-label="field.name"
-    class="hover:bg-accent/50 h-[30px] rounded-md bg-transparent px-2 font-mono text-[13px] outline-none [color-scheme:dark]"
+    class="hover:bg-accent/50 h-[30px] rounded-md bg-transparent px-2 font-mono text-[13px] outline-none dark:[color-scheme:dark]"
     @change="commitText"
     @keydown.esc="cancel"
   />

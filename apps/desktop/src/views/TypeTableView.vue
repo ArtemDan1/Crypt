@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowDown, ArrowUp, KeyRound, Plus, Search, X } from '@lucide/vue'
+import { ArrowDown, ArrowUpRight, KeyRound, ListFilter, Plus, Search, X } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -11,6 +11,8 @@ import { api, CryptApiError } from '@/lib/api'
 import { debouncedSaver } from '@/lib/debounce'
 import { formatValue, optionClass, optionsOf } from '@/lib/fields'
 import { typeIcon } from '@/lib/icons'
+import KindTile from '@/components/crypt/KindTile.vue'
+import { toneForType } from '@/lib/tones'
 import { applyView, columnLabel, sanitizeConfig, type Filter, type FilterOp, type ViewConfig } from '@/lib/table'
 import type { FieldValue, Id, RecordView, ViewDef } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
@@ -28,6 +30,18 @@ const q = ref('')
 const editing = ref<{ row: Id; col: string } | null>(null)
 const newFilter = ref<Filter>({ col: 'title', op: 'contains', value: '' })
 const filterOpen = ref(false)
+const freshId = ref<Id | null>(null)
+const tabs = ref<HTMLElement | null>(null)
+const underline = ref({ left: 0, width: 0 })
+function measureTabs() {
+  const el = tabs.value?.querySelector<HTMLElement>('[aria-selected="true"]')
+  if (el) underline.value = { left: el.offsetLeft, width: el.offsetWidth }
+}
+onMounted(() => nextTick(measureTabs))
+watch(
+  () => [activeView.value, views.value.length],
+  () => nextTick(measureTabs),
+)
 
 const ulid = () => {
   const a = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'
@@ -178,6 +192,10 @@ async function setTitle(r: RecordView, ev: Event) {
 async function newRow() {
   const id = await lib.createRecord({ type_id: props.typeId })
   await load()
+  freshId.value = id
+  setTimeout(() => {
+    if (freshId.value === id) freshId.value = null
+  }, 900)
   editing.value = { row: id, col: 'title' }
 }
 function startEdit(r: RecordView, col: string) {
@@ -196,23 +214,30 @@ const selectIds = (v: FieldValue | undefined) =>
 
 <template>
   <div v-if="type" class="flex h-full flex-col">
-    <header data-tauri-drag-region class="shrink-0 px-6 pt-4">
-      <div class="flex flex-wrap items-center gap-3">
-        <component :is="typeIcon(type.icon)" class="text-muted-foreground size-5" />
-        <h1 class="text-[22px] font-semibold tracking-tight">{{ type.name }}</h1>
-        <span class="text-muted-foreground">{{ shown.length }} из {{ rows.length }}</span>
+    <header data-tauri-drag-region class="shrink-0 border-b pr-5 pl-7">
+      <div class="flex h-16 flex-wrap items-center gap-3">
+        <KindTile :icon="typeIcon(type.icon)" :tone="toneForType(lib.types, type.id)" size="lg" />
+        <h1 class="text-[22px] font-semibold tracking-[-.02em]">{{ type.name }}</h1>
+        <span class="text-muted-foreground text-[13px]">{{ shown.length }} из {{ rows.length }}</span>
         <div class="flex-1" />
         <Button variant="outline" size="sm" @click="router.push(`/types/${type.id}`)">Поля типа</Button>
         <Button size="sm" @click="newRow"><Plus class="size-4" /> Новая запись</Button>
       </div>
 
-      <div class="mt-3.5 flex flex-wrap items-center gap-2 pb-3">
-        <div role="tablist" aria-label="Виды" class="bg-card flex flex-wrap gap-0.5 rounded-lg p-[3px]">
+      <div class="flex flex-wrap items-end gap-2">
+        <div ref="tabs" role="tablist" aria-label="Виды" class="relative flex flex-wrap gap-1">
+          <span
+            aria-hidden="true"
+            class="bg-primary absolute -bottom-px h-0.5 rounded-full transition-[left,width] duration-350 ease-[cubic-bezier(.3,1.2,.5,1)]"
+            :style="{ left: `${underline.left}px`, width: `${underline.width}px` }"
+          />
           <button
             role="tab"
             :aria-selected="!activeView"
-            class="h-7 rounded-md px-2.5 text-[13px]"
-            :class="!activeView ? 'bg-accent' : 'text-muted-foreground hover:text-foreground'"
+            class="h-[38px] px-2.5 text-[13px] transition-colors"
+            :class="
+              !activeView ? 'text-foreground font-semibold' : 'text-muted-foreground hover:text-foreground font-medium'
+            "
             @click="activeView = null"
           >
             Все
@@ -222,7 +247,7 @@ const selectIds = (v: FieldValue | undefined) =>
               v-if="activeView !== v.id"
               role="tab"
               :aria-selected="false"
-              class="text-muted-foreground hover:text-foreground h-7 rounded-md px-2.5 text-[13px]"
+              class="text-muted-foreground hover:text-foreground h-[38px] px-2.5 text-[13px] font-medium transition-colors"
               @click="activeView = v.id"
             >
               {{ v.name }}
@@ -231,7 +256,7 @@ const selectIds = (v: FieldValue | undefined) =>
               v-else
               role="tab"
               aria-selected="true"
-              class="bg-accent flex h-7 items-center gap-1 rounded-md pr-1 pl-2"
+              class="flex h-[38px] items-center gap-1 pr-1 pl-2.5 font-semibold"
             >
               <input
                 :value="v.name"
@@ -249,7 +274,7 @@ const selectIds = (v: FieldValue | undefined) =>
             </span>
           </div>
           <button
-            class="text-muted-foreground hover:text-foreground h-7 rounded-md px-2 text-[13px]"
+            class="text-muted-foreground hover:bg-foreground/[.08] mb-1 size-[30px] rounded-[7px] text-[15px] transition-colors"
             aria-label="Сохранить как вид"
             title="Сохранить текущие фильтры как вид"
             @click="saveAsView"
@@ -257,11 +282,11 @@ const selectIds = (v: FieldValue | undefined) =>
             +
           </button>
         </div>
-        <span class="bg-border mx-1 h-5 w-px" />
+        <span class="bg-border mx-1 mb-2.5 h-5 w-px" />
         <span
           v-for="(f, i) in cfg.filters"
           :key="i"
-          class="flex h-7 items-center gap-1.5 rounded-md border border-dashed px-2.5 text-[13px]"
+          class="bg-primary-soft text-primary-soft-fg mb-1.5 flex h-[26px] items-center gap-1.5 rounded-[7px] pr-1.5 pl-2.5 text-xs font-medium"
         >
           {{ filterText(f) }}
           <button
@@ -275,9 +300,9 @@ const selectIds = (v: FieldValue | undefined) =>
         <Popover v-model:open="filterOpen">
           <PopoverTrigger as-child>
             <button
-              class="text-muted-foreground hover:text-foreground h-7 rounded-md border border-dashed px-2.5 text-[13px]"
+              class="text-muted-foreground hover:text-foreground border-border-strong mb-1.5 flex h-[26px] items-center gap-1.5 rounded-[7px] border border-dashed px-2.5 text-xs"
             >
-              + Фильтр
+              <ListFilter class="size-3" /> Фильтр
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" class="flex w-72 flex-col gap-2 p-3">
@@ -301,7 +326,9 @@ const selectIds = (v: FieldValue | undefined) =>
           </PopoverContent>
         </Popover>
         <div class="flex-1" />
-        <label class="text-muted-foreground flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-[13px]">
+        <label
+          class="bg-background text-muted-foreground mb-1 flex h-[30px] items-center gap-2 rounded-lg border px-2.5 text-[13px]"
+        >
           <Search class="size-3.5" />
           <input
             v-model="q"
@@ -313,96 +340,111 @@ const selectIds = (v: FieldValue | undefined) =>
       </div>
     </header>
 
-    <div class="min-h-0 flex-1 overflow-auto border-t">
+    <div class="min-h-0 flex-1 overflow-auto pr-5 pl-4">
       <table class="w-full min-w-[760px] border-collapse text-[13px]">
-        <thead class="bg-card/60 sticky top-0 z-10 backdrop-blur">
+        <thead class="bg-background/85 sticky top-0 z-10 backdrop-blur">
           <tr class="text-muted-foreground h-9 border-b">
             <th v-for="(c, i) in columns" :key="c" class="px-3 text-left font-medium" :class="i === 0 && 'pl-6'">
               <button
-                class="hover:text-foreground flex items-center gap-1"
+                class="hover:text-foreground flex items-center gap-1.5 transition-colors"
+                :class="sortOf(c) && 'text-foreground'"
                 :title="'Сортировка (Shift — добавить)'"
                 @click="toggleSort(c, $event)"
               >
                 {{ columnLabel(c, type) }}
-                <ArrowUp v-if="sortOf(c) === 'asc'" class="size-3" />
-                <ArrowDown v-else-if="sortOf(c) === 'desc'" class="size-3" />
+                <ArrowDown
+                  class="size-3 transition-[transform,opacity] duration-300 ease-[cubic-bezier(.3,1.3,.5,1)]"
+                  :class="[sortOf(c) ? 'opacity-100' : 'opacity-0', sortOf(c) === 'asc' && 'rotate-180']"
+                />
               </button>
             </th>
           </tr>
         </thead>
         <tbody>
-          <RecordContextMenu v-for="r in shown" :key="r.id" :record="r"><tr class="hover:bg-card/50 h-11 border-b border-zinc-800/60">
-            <td
-              v-for="(c, i) in columns"
-              :key="c"
-              class="max-w-[320px] px-3"
-              :class="i === 0 && 'pl-6'"
-              @dblclick="startEdit(r, c)"
+          <RecordContextMenu v-for="r in shown" :key="r.id" :record="r"
+            ><tr
+              class="group/row hover:bg-foreground/[.035] h-11 border-b transition-colors"
+              :class="freshId === r.id && 'anim-fresh'"
             >
-              <template v-if="c === 'title'">
-                <input
-                  v-if="isEditing(r, c)"
-                  :ref="(el) => (el as HTMLInputElement | null)?.focus()"
-                  :value="r.title"
-                  class="border-secret h-8 w-full rounded border bg-transparent px-1.5 font-medium outline-none"
-                  aria-label="Название"
-                  @blur="setTitle(r, $event)"
-                  @keydown.enter="($event.target as HTMLInputElement).blur()"
-                  @keydown.esc="editing = null"
-                />
-                <RouterLink
+              <td
+                v-for="(c, i) in columns"
+                :key="c"
+                class="max-w-[320px] px-3"
+                :class="i === 0 && 'pl-6'"
+                @dblclick="startEdit(r, c)"
+              >
+                <template v-if="c === 'title'">
+                  <input
+                    v-if="isEditing(r, c)"
+                    :ref="(el) => (el as HTMLInputElement | null)?.focus()"
+                    :value="r.title"
+                    class="border-primary h-8 w-full rounded-md border bg-transparent px-1.5 font-medium outline-none"
+                    aria-label="Название"
+                    @blur="setTitle(r, $event)"
+                    @keydown.enter="($event.target as HTMLInputElement).blur()"
+                    @keydown.esc="editing = null"
+                  />
+                  <RouterLink
+                    v-else
+                    :to="`/r/${r.id}`"
+                    class="flex items-center gap-1.5 font-medium"
+                    :class="!r.title && 'text-muted-foreground'"
+                    ><span class="truncate">{{ display(r, c) }}</span
+                    ><ArrowUpRight
+                      class="text-muted-foreground size-3.5 shrink-0 -translate-x-1 opacity-0 transition group-hover/row:translate-x-0 group-hover/row:opacity-100"
+                  /></RouterLink>
+                </template>
+                <div
+                  v-else-if="isEditing(r, c) && fieldOf(c)"
+                  class="border-primary rounded-md border"
+                  @focusout="editing = null"
+                >
+                  <FieldEditor
+                    :field="fieldOf(c)!"
+                    :value="r.fields[c]"
+                    :record-id="r.id"
+                    autofocus
+                    @change="(v) => setCell(r, c, v)"
+                    @done="editing = null"
+                  />
+                </div>
+                <template v-else-if="fieldOf(c)?.kind.kind === 'SecretLink' && r.fields[c]?.kind === 'Links'">
+                  <span
+                    v-for="id in (r.fields[c] as { value: string[] }).value"
+                    :key="id"
+                    class="bg-secret-bg text-secret-fg mr-1 inline-flex h-6 items-center gap-1.5 rounded-md px-2 text-xs font-medium"
+                  >
+                    <KeyRound class="size-3" /> {{ titleOf(id) ?? 'удалено' }}
+                  </span>
+                </template>
+                <template v-else-if="options(c).length">
+                  <span
+                    v-for="o in options(c).filter((o) => selectIds(r.fields[c]).includes(o.id))"
+                    :key="o.id"
+                    class="mr-1 rounded-full px-2 py-0.5 text-xs"
+                    :class="optionClass(o.color)"
+                    >{{ o.label }}</span
+                  >
+                </template>
+                <span
                   v-else
-                  :to="`/r/${r.id}`"
-                  class="font-medium hover:underline"
-                  :class="!r.title && 'text-muted-foreground'"
-                  >{{ display(r, c) }}</RouterLink
+                  class="block truncate"
+                  :class="fieldOf(c)?.kind.kind === 'Number' ? 'tabular-nums' : ''"
+                  tabindex="0"
+                  @keydown.enter="startEdit(r, c)"
+                  >{{ display(r, c) || ' ' }}</span
                 >
-              </template>
-              <div
-                v-else-if="isEditing(r, c) && fieldOf(c)"
-                class="border-secret rounded border"
-                @focusout="editing = null"
-              >
-                <FieldEditor
-                  :field="fieldOf(c)!"
-                  :value="r.fields[c]"
-                  :record-id="r.id"
-                  autofocus
-                  @change="(v) => setCell(r, c, v)"
-                  @done="editing = null"
-                />
-              </div>
-              <template v-else-if="fieldOf(c)?.kind.kind === 'SecretLink' && r.fields[c]?.kind === 'Links'">
-                <span
-                  v-for="id in (r.fields[c] as { value: string[] }).value"
-                  :key="id"
-                  class="bg-card mr-1 inline-flex h-6 items-center gap-1.5 rounded-md border border-zinc-600 px-2 text-xs"
-                >
-                  <KeyRound class="text-secret size-3" /> {{ titleOf(id) ?? 'удалено' }}
-                </span>
-              </template>
-              <template v-else-if="options(c).length">
-                <span
-                  v-for="o in options(c).filter((o) => selectIds(r.fields[c]).includes(o.id))"
-                  :key="o.id"
-                  class="mr-1 rounded-full px-2 py-0.5 text-xs"
-                  :class="optionClass(o.color)"
-                  >{{ o.label }}</span
-                >
-              </template>
-              <span
-                v-else
-                class="block truncate"
-                :class="fieldOf(c)?.kind.kind === 'Number' ? 'tabular-nums' : ''"
-                tabindex="0"
-                @keydown.enter="startEdit(r, c)"
-                >{{ display(r, c) || ' ' }}</span
-              >
-            </td>
-          </tr></RecordContextMenu>
+              </td>
+            </tr></RecordContextMenu
+          >
           <tr class="h-10">
             <td :colspan="columns.length" class="pl-6">
-              <button class="text-muted-foreground hover:text-foreground" @click="newRow">+ Новая строка</button>
+              <button
+                class="text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
+                @click="newRow"
+              >
+                <Plus class="size-3.5" /> Новая строка
+              </button>
             </td>
           </tr>
         </tbody>

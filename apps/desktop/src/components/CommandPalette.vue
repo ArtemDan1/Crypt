@@ -95,51 +95,63 @@ function onKey(e: KeyboardEvent) {
 <template>
   <Dialog v-model:open="open">
     <DialogContent
-      class="top-[18%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-[560px]"
+      class="top-[16%] translate-y-0 gap-0 overflow-hidden rounded-[14px] p-0 shadow-[0_30px_80px_-20px_rgba(0,0,0,.45)] sm:max-w-[600px]"
       :show-close-button="false"
     >
       <DialogTitle class="sr-only">Поиск</DialogTitle>
       <DialogDescription class="sr-only">Поиск по записям и командам</DialogDescription>
-      <label class="flex h-12 items-center gap-2.5 border-b px-4">
-        <Search class="text-muted-foreground size-4" />
+      <label class="text-muted-foreground flex h-[54px] items-center gap-3 border-b px-[18px]">
+        <Search class="size-[18px]" />
         <input
           ref="input"
           v-model="query"
           placeholder="Найти запись или команду…"
-          class="flex-1 bg-transparent text-[15px] outline-none"
+          class="text-foreground placeholder:text-muted-foreground flex-1 bg-transparent text-[15px] outline-none"
           aria-label="Поиск"
           @keydown="onKey"
         />
+        <kbd class="rounded border px-1.5 font-mono text-[11px]">esc</kbd>
       </label>
-      <div class="max-h-[380px] overflow-auto p-1.5" role="listbox">
-        <div
-          v-if="!query.trim() && recent.length"
-          class="text-muted-foreground px-2.5 pt-1.5 pb-1 text-[11px] font-medium tracking-wider uppercase"
-        >
-          Недавние
-        </div>
-        <button
-          v-for="(it, i) in items"
-          :key="it.key"
-          role="option"
-          :aria-selected="i === active"
-          class="flex w-full items-start gap-3 rounded-md px-2.5 py-2 text-left"
-          :class="i === active ? 'bg-accent' : ''"
-          @mousemove="active = i"
-          @click="it.run()"
-        >
-          <component :is="it.icon" class="text-muted-foreground mt-0.5 size-4 shrink-0" />
-          <span class="min-w-0 flex-1">
-            <span class="block truncate">{{ it.title }}</span>
-            <span v-if="it.sub && it.key.length > 10" class="text-muted-foreground block truncate text-xs">{{
+      <div class="max-h-[400px] overflow-auto p-2" role="listbox">
+        <template v-for="(it, i) in items" :key="it.key">
+          <div
+            v-if="i === 0 && !it.key.startsWith('c:')"
+            class="text-muted-foreground px-2.5 pt-1.5 pb-1.5 text-[11px] font-semibold tracking-wider uppercase"
+          >
+            {{ query.trim() ? 'Записи' : 'Недавние' }}
+          </div>
+          <div
+            v-if="it.key.startsWith('c:') && (i === 0 || !items[i - 1]!.key.startsWith('c:'))"
+            class="text-muted-foreground px-2.5 pt-2.5 pb-1.5 text-[11px] font-semibold tracking-wider uppercase"
+          >
+            Команды
+          </div>
+          <button
+            role="option"
+            :aria-selected="i === active"
+            class="flex min-h-10 w-full items-center gap-3 rounded-lg px-2.5 py-1.5 text-left transition-colors"
+            :class="i === active ? 'bg-accent' : ''"
+            @mousemove="active = i"
+            @click="it.run()"
+          >
+            <component :is="it.icon" class="text-muted-foreground size-4 shrink-0" />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate text-[14px]">{{ it.title }}</span>
+              <span v-if="it.sub && !it.key.startsWith('c:')" class="text-muted-foreground block truncate text-xs">{{
+                it.sub
+              }}</span>
+            </span>
+            <span v-if="it.sub && it.key.startsWith('c:')" class="text-muted-foreground font-mono text-xs">{{
               it.sub
             }}</span>
-          </span>
-          <span v-if="it.sub && it.key.startsWith('c:')" class="text-muted-foreground text-xs">{{ it.sub }}</span>
-        </button>
+          </button>
+        </template>
         <p v-if="query.trim() && !hits.length" class="text-muted-foreground px-2.5 py-3 text-[13px]">
           Ничего не найдено. Enter на «Новая запись» создаст «{{ query.trim() }}».
         </p>
+      </div>
+      <div class="text-muted-foreground flex gap-4 border-t px-[18px] py-2.5 font-mono text-xs">
+        <span>↑↓ выбрать</span><span>↵ открыть</span><span>esc закрыть</span>
       </div>
     </DialogContent>
   </Dialog>

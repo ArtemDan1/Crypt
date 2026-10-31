@@ -4,6 +4,7 @@ import { api } from '@/lib/api'
 import type { Folder, Id, NewRecord, RecordSummary, TypeDef } from '@/lib/types'
 
 export const useLibrary = defineStore('library', () => {
+  const name = ref('')
   const types = ref<TypeDef[]>([])
   const folders = ref<Folder[]>([])
   const tags = ref<[string, number][]>([])
@@ -27,13 +28,15 @@ export const useLibrary = defineStore('library', () => {
   const secretsCount = computed(() => records.value.filter((r) => r.secret_kind).length)
 
   async function refreshAll() {
-    const [t, f, g, r, trash] = await Promise.all([
+    const [n, t, f, g, r, trash] = await Promise.all([
+      api.vaultName(),
       api.listTypes(),
       api.listFolders(),
       api.allTags(),
       api.listRecords({}),
       api.listRecords({ trashed: true }),
     ])
+    name.value = n
     types.value = t
     folders.value = f
     tags.value = g
@@ -58,7 +61,13 @@ export const useLibrary = defineStore('library', () => {
     return id
   }
 
+  async function rename(next: string) {
+    await api.renameVault(next)
+    name.value = await api.vaultName()
+  }
+
   function clear() {
+    name.value = ''
     types.value = []
     folders.value = []
     tags.value = []
@@ -67,6 +76,8 @@ export const useLibrary = defineStore('library', () => {
   }
 
   return {
+    name,
+    rename,
     types,
     folders,
     tags,

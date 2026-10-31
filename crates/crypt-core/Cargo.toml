@@ -6,7 +6,7 @@ rust-version = "1.94"
 
 [features]
 default = ["fs"]
-fs = ["dep:keepass", "dep:yaml-rust2"]
+fs = ["dep:keepass", "dep:yaml-rust2", "dep:rqrr", "dep:image", "dep:scrypt", "dep:aes-gcm"]
 wasm = ["getrandom/js", "dep:getrandom03"]
 
 [dependencies]
@@ -40,6 +40,13 @@ getrandom03 = { package = "getrandom", version = "0.3", features = ["wasm_js"], 
 keepass = { version = "0.17", optional = true }
 yaml-rust2 = { version = "0.13", optional = true }
 
+rqrr = { version = "0.10", optional = true }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"], optional = true }
+scrypt = { version = "0.11", optional = true }
+aes-gcm = { version = "0.10", optional = true }
+
 [dev-dependencies]
+qrcode = { version = "0.14", default-features = false }
+
 tempfile = "3"
 keepass = { version = "0.17", features = ["save_kdbx4"] }

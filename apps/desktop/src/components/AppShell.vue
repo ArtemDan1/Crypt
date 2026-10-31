@@ -33,7 +33,8 @@ const actions: Record<string, () => unknown> = {
 async function onKey(e: KeyboardEvent) {
   if (!e.metaKey || e.altKey || e.ctrlKey || session.status.state !== 'unlocked') return
   const k = e.key.toLowerCase()
-  const action = k === 'k' ? 'search' : k === 'n' ? (e.shiftKey ? 'new-folder' : 'new-record') : k === 'l' ? 'lock' : null
+  const action =
+    k === 'k' ? 'search' : k === 'n' ? (e.shiftKey ? 'new-folder' : 'new-record') : k === 'l' ? 'lock' : null
   if (!action) return
   e.preventDefault()
   await actions[action]!()

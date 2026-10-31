@@ -10,13 +10,13 @@ fn password_respects_length_and_classes() {
         assert!(p.bytes().any(|b| b.is_ascii_lowercase()));
         assert!(p.bytes().any(|b| b.is_ascii_uppercase()));
         assert!(p.bytes().any(|b| b.is_ascii_digit()));
-        assert!(p.contains(|c| "!#$%&*+-=?@^_~".contains(c)));
+        assert!(p.contains(|c| "!\"#$%&'*+,./:;=?@\\^`|~".contains(c)));
         let p = generate_password(&PasswordOptions {
             avoid_ambiguous: true,
             ..Default::default()
         })
         .unwrap();
-        assert!(!p.contains(|c| "0O1lI".contains(c)));
+        assert!(!p.contains(|c| "0O1lI|".contains(c)));
     }
     let p = generate_password(&PasswordOptions {
         length: 8,
@@ -30,7 +30,7 @@ fn password_respects_length_and_classes() {
 }
 #[test]
 fn password_rejects_bad_options() {
-    for length in [7, 129] {
+    for length in [3, 129] {
         assert!(
             generate_password(&PasswordOptions {
                 length,

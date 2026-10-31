@@ -72,3 +72,12 @@ pub mod r#gen;
 pub mod totp;
 
 pub mod ssh;
+
+#[cfg(feature = "fs")]
+pub use vault::backup;
+
+#[cfg(feature="fs")]
+pub use vault::{import_csv,import_apply};
+
+#[cfg(feature="fs")]
+pub use vault::import_otp;

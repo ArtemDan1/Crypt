@@ -2,9 +2,12 @@
 export function idleTimer(onIdle: () => void, delay: number) {
   let timer: ReturnType<typeof setTimeout> | null = null
   let running = false
+  let firesAt: number | null = null
   const arm = () => {
     if (timer) clearTimeout(timer)
+    firesAt = Date.now() + delay
     timer = setTimeout(() => {
+      firesAt = null
       running = false
       timer = null
       onIdle()
@@ -17,11 +20,16 @@ export function idleTimer(onIdle: () => void, delay: number) {
     },
     stop() {
       running = false
+      firesAt = null
       if (timer) clearTimeout(timer)
       timer = null
     },
     activity() {
       if (running) arm()
+    },
+    /** Milliseconds until it fires, or null when stopped. */
+    remaining(): number | null {
+      return running && firesAt !== null ? Math.max(0, firesAt - Date.now()) : null
     },
     setDelay(ms: number) {
       delay = ms

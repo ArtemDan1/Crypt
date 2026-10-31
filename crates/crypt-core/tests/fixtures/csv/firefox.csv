@@ -1,0 +1,2 @@
+url,username,password,httpRealm,formActionOrigin,guid,timeCreated,timeLastUsed,timePasswordChanged
+https://example.org,bob,synthetic-two,,https://example.org,synthetic,0,0,0

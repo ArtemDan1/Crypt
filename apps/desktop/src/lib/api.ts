@@ -16,6 +16,7 @@ import type {
   SecretOverview,
   SshKeyInfo,
   TotpCode,
+  GeneratedPassword,
   PasswordOptions,
   SecretRevisionMeta,
   SshCandidate,
@@ -54,6 +55,22 @@ export async function call<T>(cmd: string, args?: Record<string, unknown>): Prom
 }
 
 export const api = {
+  previewBrowserCsv: (path: string) => call<import('./types').BrowserPreview>('preview_browser_csv', { path }),
+  importBrowserCsv: (path: string, folder: string) =>
+    call<Imported<import('./types').LoginImportReport>>('import_browser_csv', { path, folder }),
+  previewOtp: (source: import('./types').OtpSource) => call<import('./types').OtpPreview>('preview_otp', { source }),
+  importOtp: (token: string, folder: string) =>
+    call<Imported<import('./types').OtpImportReport>>('import_otp', { token, folder }),
+  cancelOtpImport: () => call<void>('cancel_otp_import'),
+  trashFile: (path: string) => call<void>('trash_file', { path }),
+  inspectBackup: (path: string) => call<import('./types').BackupInspection>('inspect_backup', { path }),
+  restoreBackup: (path: string, words: string[]) => call<VaultStatus>('restore_backup', { path, words }),
+  exportBackup: (path: string, pin?: string) =>
+    call<import('./types').BackupExport>('export_backup', { path, pin: pin || null }),
+  recentSecrets: (limit = 6) => call<Id[]>('recent_secrets', { limit }),
+  trayHide: () => call<void>('tray_hide'),
+  appQuit: () => call<void>('app_quit'),
+  show: () => call<void>('show'),
   secretOverview: (id: Id) => call<SecretOverview>('secret_overview', { id }),
   revealSecret: (id: Id, name: string) => call<string>('reveal_secret', { id, name }),
   copySecret: (id: Id, name: string) => call<void>('copy_secret', { id, name }),
@@ -63,6 +80,9 @@ export const api = {
     call<string>('reveal_secret_revision', { id, name, index }),
   copySecretRevision: (id: Id, name: string, index: number) => call<void>('copy_secret_revision', { id, name, index }),
   generatePassword: (options: PasswordOptions) => call<string>('generate_password', { options }),
+  copyText: (text: string) => call<void>('copy_text', { text }),
+  generatePasswords: (options: PasswordOptions, count: number) =>
+    call<GeneratedPassword[]>('generate_passwords', { options, count }),
   totpNow: (id: Id) => call<TotpCode | null>('totp_now', { id }),
   copyTotp: (id: Id) => call<void>('copy_totp', { id }),
   setSshKey: (id: Id, pem: string, passphrase?: string) =>
@@ -97,6 +117,8 @@ export const api = {
   unlockPin: (pin: string) => call<VaultStatus>('unlock_pin', { pin }),
   revealSeed: (pin?: string) => call<string[]>('reveal_seed', { pin: pin ?? null }),
   // library
+  vaultName: () => call<string>('vault_name'),
+  renameVault: (name: string) => call<void>('rename_vault', { name }),
   listTypes: () => call<TypeDef[]>('list_types'),
   putType: (t: TypeDef) => call<void>('put_type', { t }),
   deleteType: (id: Id) => call<void>('delete_type', { id }),
@@ -121,6 +143,8 @@ export const api = {
   removeTag: (id: Id, tag: string) => call<void>('remove_tag', { id, tag }),
   setField: (id: Id, field: Id, value: FieldValue | null) => call<void>('set_field', { id, field, value }),
   deleteRecord: (id: Id) => call<void>('delete_record', { id }),
+  /** Notes go to trash, secrets are purged. Returns [trashed, purged]. */
+  deleteRecords: (ids: Id[]) => call<[number, number]>('delete_records', { ids }),
   restoreRecord: (id: Id) => call<void>('restore_record', { id }),
   purgeRecord: (id: Id) => call<void>('purge_record', { id }),
   emptyTrash: () => call<number>('empty_trash'),
@@ -139,5 +163,5 @@ export const api = {
   importMarkdown: (path: string) => call<Imported<MarkdownImportReport>>('import_markdown', { path }),
   exportMarkdown: (path: string, includeSecrets: boolean) =>
     call<ExportReport>('export_markdown', { path, includeSecrets }),
-  flushDone: () => call<void>('flush_done'),
+  flushDone: (token: string) => call<void>('flush_done', { token }),
 }

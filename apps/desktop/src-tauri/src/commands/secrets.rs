@@ -26,6 +26,17 @@ mod tests {
         (d, st, id)
     }
     #[test]
+    fn copy_text_needs_unlocked_vault_and_uses_clipboard() {
+        let (_d, mut st, _id) = state();
+        let cb = std::sync::Arc::new(crate::clipboard::MemoryClipboard::default());
+        st.clipboard = cb.clone();
+        copy_text(&st, "Hollow-Brick").unwrap();
+        assert_eq!(cb.read(), "Hollow-Brick");
+        lock(&st);
+        assert!(copy_text(&st, "x").is_err());
+        assert_eq!(cb.read(), "Hollow-Brick");
+    }
+    #[test]
     fn overview_hides_sensitive_values() {
         let (_d, st, id) = state();
         for (name, value) in [
@@ -211,11 +222,18 @@ pub fn reveal(st: &AppState, id: &RecordId, name: &str) -> ApiResult<String> {
             .unwrap_or_default())
     })
 }
+/// Copy a value that is not stored yet (a freshly generated password) with the usual auto-clear.
+pub fn copy_text(st: &AppState, text: &str) -> ApiResult<()> {
+    with_vault(st, |_| Ok(()))?;
+    copy_with_clear(st.clipboard.clone(), text, clear_after(st));
+    Ok(())
+}
 pub fn copy_value(st: &AppState, id: &RecordId, name: &str) -> ApiResult<()> {
     with_vault(st, |v| {
         allow_value(name)?;
         let value = v.secret_value(id, name)?.unwrap_or_default();
         copy_with_clear(st.clipboard.clone(), &value, clear_after(st));
+        st.recent.touch(*id);
         Ok(())
     })
 }
@@ -279,6 +297,13 @@ fn now() -> u64 {
         .as_secs()
 }
 pub mod cmd {
+    #[tauri::command]
+    pub fn recent_secrets(st: tauri::State<'_, std::sync::Arc<crate::state::AppState>>, limit: usize) -> Vec<crypt_core::RecordId> {
+        let guard = st.vault_guard();
+        if guard.is_none() { return vec![]; }
+        st.recent.list(limit)
+    }
+
     use super::*;
     use tauri::State;
     #[tauri::command]
@@ -303,6 +328,11 @@ pub mod cmd {
         name: String,
     ) -> ApiResult<()> {
         copy_value(&st, &id, &name)
+    }
+    #[tauri::command]
+    pub async fn copy_text(st: State<'_, std::sync::Arc<AppState>>, text: String) -> ApiResult<()> {
+        let text = zeroize::Zeroizing::new(text);
+        super::copy_text(&st, &text)
     }
     #[tauri::command]
     pub async fn set_secret(
@@ -351,6 +381,36 @@ pub mod cmd {
             Ok(crypt_core::r#gen::generate_password(&options)?.to_string())
         })
     }
+    #[derive(serde::Serialize)]
+    #[serde(rename_all = "camelCase")]
+    pub struct GeneratedOut {
+        pub value: String,
+        pub bits: u32,
+    }
+    #[tauri::command]
+    pub async fn generate_passwords(
+        st: State<'_, std::sync::Arc<AppState>>,
+        options: PasswordOptions,
+        count: usize,
+    ) -> ApiResult<Vec<GeneratedOut>> {
+        if !(1..=10).contains(&count) {
+            return Err(crate::error::ApiError::new(
+                "Validation",
+                "Можно создать от 1 до 10 вариантов",
+            ));
+        }
+        with_vault(&st, |_| {
+            (0..count)
+                .map(|_| {
+                    let g = crypt_core::r#gen::generate(&options)?;
+                    Ok(GeneratedOut {
+                        value: g.value.to_string(),
+                        bits: g.bits,
+                    })
+                })
+                .collect()
+        })
+    }
     #[tauri::command]
     pub async fn totp_now(
         st: State<'_, std::sync::Arc<AppState>>,
@@ -363,6 +423,7 @@ pub mod cmd {
         with_vault(&st, |v| {
             if let Some(code) = v.totp_code(&id, now())? {
                 copy_with_clear(st.clipboard.clone(), &code.code, clear_after(&st));
+                st.recent.touch(id);
             }
             Ok(())
         })

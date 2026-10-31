@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { emit } from '@tauri-apps/api/event'
 import { idleTimer } from '@/lib/idle'
 import { api } from '@/lib/api'
 import type { UnlockMethods, VaultStatus } from '@/lib/types'
@@ -7,6 +8,7 @@ import type { UnlockMethods, VaultStatus } from '@/lib/types'
 type Hook = () => Promise<void> | void
 
 export const useSession = defineStore('session', () => {
+  const ownsIdle = typeof window === 'undefined' || window.location.hash !== '#/tray'
   const status = ref<VaultStatus>({ state: 'noVault' })
   const methods = ref<UnlockMethods | null>(null)
   const hooks = new Set<Hook>()
@@ -17,6 +19,9 @@ export const useSession = defineStore('session', () => {
   }
   async function create(words: string[]) {
     status.value = await api.createVault(words)
+  }
+  async function restoreBackup(path: string, words: string[]) {
+    status.value = await api.restoreBackup(path, words)
   }
   async function unlockSeed(words: string[]) {
     status.value = await api.unlockWithSeed(words)
@@ -41,7 +46,6 @@ export const useSession = defineStore('session', () => {
   }
   async function lock() {
     if (status.value.state !== 'unlocked') return
-    await flushAll()
     status.value = await api.lock()
     methods.value = await api.unlockMethods().catch(() => null)
   }
@@ -58,22 +62,60 @@ export const useSession = defineStore('session', () => {
   const idle = idleTimer(() => {
     lock()
   }, 15 * 60_000)
-  const poke = () => idle.activity()
+  const activity = () => {
+    if (ownsIdle) {
+      idle.activity()
+      tick()
+    }
+  }
+  let lastBroadcast = 0
+  const poke = () => {
+    activity()
+    if (Date.now() - lastBroadcast >= 500) {
+      lastBroadcast = Date.now()
+      void emit('session-activity').catch(() => {})
+    }
+  }
   if (typeof window !== 'undefined') {
     for (const ev of ['pointerdown', 'keydown', 'wheel'] as const)
       window.addEventListener(ev, poke, { passive: true, capture: true })
   }
+  // Countdown for the lock button ring; ticks only while unlocked.
+  const autolockTotal = ref<number | null>(null)
+  const autolockLeft = ref<number | null>(null)
+  let ticker: ReturnType<typeof setInterval> | null = null
+  const tick = () => {
+    autolockLeft.value = idle.remaining()
+    if (ownsIdle)
+      void emit('session-countdown', { left: autolockLeft.value, total: autolockTotal.value }).catch(() => {})
+  }
+  function applyCountdown(value: { left: number | null; total: number | null }) {
+    if (!ownsIdle) {
+      autolockLeft.value = value.left
+      autolockTotal.value = value.total
+    }
+  }
   function applyAutolock(minutes: number) {
     idle.setDelay(minutes * 60_000)
+    autolockTotal.value = minutes > 0 ? minutes * 60_000 : null
+    tick()
   }
   watch(
     () => status.value.state,
     async (s) => {
-      if (s === 'unlocked') {
+      if (s === 'unlocked' && ownsIdle) {
         const st = await api.getSettings().catch(() => null)
+        if (status.value.state !== 'unlocked') return
         if (st) applyAutolock(st.autolockMinutes)
         idle.start()
-      } else idle.stop()
+        tick()
+        if (!ticker) ticker = setInterval(tick, 1000)
+      } else {
+        idle.stop()
+        if (ticker) clearInterval(ticker)
+        ticker = null
+        autolockLeft.value = null
+      }
     },
   )
 
@@ -82,8 +124,13 @@ export const useSession = defineStore('session', () => {
     methods,
     refresh,
     applyAutolock,
+    applyCountdown,
+    activity,
+    autolockLeft,
+    autolockTotal,
     create,
     unlockSeed,
+    restoreBackup,
     unlockBiometric,
     unlockPin,
     beforeLock,

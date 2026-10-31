@@ -12,6 +12,7 @@ pub struct Settings {
     pub agent_enabled: bool,
     pub agent_trust_minutes: u32,
     pub launch_at_login: bool,
+    pub last_backup_at: Option<i64>,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -21,6 +22,7 @@ impl Default for Settings {
             agent_enabled: true,
             agent_trust_minutes: 0,
             launch_at_login: false,
+            last_backup_at: None,
         }
     }
 }
@@ -40,6 +42,9 @@ impl Settings {
 }
 
 pub struct AppState {
+    pub pending_otp: Mutex<Option<crate::commands::transfer::PendingOtp>>,
+    pub otp_generation: std::sync::atomic::AtomicU64,
+    pub recent: crate::recent::RecentSecrets,
     pub app: Mutex<Option<tauri::AppHandle>>,
     pub agent: crate::agent::server::AgentHandle,
     pub agent_error: Mutex<Option<String>>,
@@ -53,7 +58,8 @@ pub struct AppState {
     pub keys: Box<dyn KeyStore>,
     pub auth: Box<dyn Authenticator>,
     /// Set while a graceful lock waits for the frontend to flush pending saves.
-    pub flush_waiter: Mutex<Option<mpsc::Sender<()>>>,
+    pub flush_waiter: Mutex<Option<(String, mpsc::Sender<()>)>>,
+    pub lock_requests: Mutex<()>,
 }
 impl AppState {
     pub fn new(
@@ -64,6 +70,9 @@ impl AppState {
     ) -> Self {
         let settings = Settings::load(&settings_path);
         Self {
+            pending_otp: Mutex::new(None),
+            otp_generation: std::sync::atomic::AtomicU64::new(0),
+            recent: Default::default(),
             app: Mutex::new(None),
             agent: Default::default(),
             agent_error: Mutex::new(None),
@@ -80,6 +89,7 @@ impl AppState {
             keys,
             auth,
             flush_waiter: Mutex::new(None),
+            lock_requests: Mutex::new(()),
         }
     }
     pub fn unlocker(&self) -> Unlocker<'_> {

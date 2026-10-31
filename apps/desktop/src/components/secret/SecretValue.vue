@@ -9,6 +9,7 @@ import type { SecretFieldMeta } from '@/lib/secretFields'
 import { api } from '@/lib/api'
 import { useRevealTimer } from '@/lib/reveal'
 import { useSession } from '@/stores/session'
+import { passwordStrength } from '@/lib/strength'
 const props = defineProps<{
     recordId: string
     meta: SecretFieldMeta
@@ -75,6 +76,15 @@ const empty = computed(() => (props.meta.sensitive ? !props.filled : !props.publ
 const shown = computed(() =>
   empty.value ? 'не задано' : props.meta.sensitive ? (revealed.value ?? '••••••••') : props.publicValue,
 )
+// Strength is shown only for a value already on screen (revealed or being typed/generated).
+const strength = computed(() => {
+  if (props.meta.name !== 'password') return null
+  const v = editing.value ? draft.value : revealed.value
+  return v ? passwordStrength(v) : null
+})
+// Never let the generator overwrite an existing value: the field has to be cleared first.
+const hasValue = computed(() => (editing.value ? draft.value.length > 0 : !empty.value))
+const strengthTone = ['bg-destructive', 'bg-secret', 'bg-primary', 'bg-primary']
 // Sensitive and multiline drafts are saved explicitly; plain values save on blur.
 const explicit = computed(() => props.meta.sensitive || props.meta.multiline)
 async function reveal() {
@@ -114,7 +124,7 @@ async function copy() {
   try {
     await api.copySecret(props.recordId, props.meta.name)
     const settings = await api.getSettings()
-    toast(`Скопировано, буфер очистится через ${settings.clipboardClearSeconds} с`)
+    toast.success(`${props.meta.label}: скопировано · очистится через ${settings.clipboardClearSeconds} с`)
   } catch (e) {
     toast.error(e instanceof Error ? e.message : 'Не удалось скопировать')
   }
@@ -152,7 +162,7 @@ async function generated(value: string) {
           v-model="draft"
           rows="4"
           :aria-label="meta.label"
-          class="-mx-2 min-w-0 flex-1 rounded-md bg-transparent px-2 py-1.5 text-sm outline-none ring-1 ring-secret/60"
+          class="min-w-0 flex-1 rounded-lg bg-transparent px-2.5 py-1.5 text-sm outline-none ring-1 ring-primary/60 ring-inset"
           :class="meta.mono ? 'font-mono' : ''"
           @keydown.esc.prevent="cancel"
           @keydown.meta.enter.prevent="save"
@@ -164,7 +174,7 @@ async function generated(value: string) {
           :type="meta.sensitive && !visible ? 'password' : 'text'"
           :aria-label="meta.label"
           :placeholder="meta.sensitive && filled ? 'Новое значение' : 'не задано'"
-          class="-mx-2 h-9 min-w-0 flex-1 rounded-md bg-transparent px-2 text-sm outline-none ring-1 ring-secret/60 placeholder:font-sans"
+          class="h-9 min-w-0 flex-1 rounded-lg bg-transparent px-2.5 text-sm outline-none ring-1 ring-primary/60 ring-inset placeholder:font-sans"
           :class="meta.mono || meta.sensitive ? 'font-mono' : ''"
           autocomplete="off"
           @keydown.enter.prevent="save"
@@ -179,7 +189,7 @@ async function generated(value: string) {
           ><component :is="visible ? EyeOff : Eye" class="size-4" /></Button
         ><template v-if="explicit"
           ><Button variant="ghost" size="sm" aria-label="Сохранить" :disabled="busy" @click="save"
-            ><Check class="size-4 text-secret" /></Button
+            ><Check class="size-4 text-primary" /></Button
           ><Button variant="ghost" size="sm" aria-label="Отмена" @click="cancel"><X class="size-4" /></Button
         ></template>
       </template>
@@ -189,22 +199,32 @@ async function generated(value: string) {
           type="button"
           :aria-label="`Изменить ${meta.label}`"
           :title="explicit ? 'Нажмите, чтобы изменить' : undefined"
-          class="-mx-2 min-h-9 min-w-0 flex-1 cursor-text whitespace-pre-wrap break-all rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent/60"
+          class="min-h-8 min-w-0 flex-1 cursor-text rounded-lg px-2.5 py-1.5 text-left text-sm break-all whitespace-pre-wrap transition-colors"
           :class="[
             empty ? 'text-muted-foreground' : meta.mono || meta.sensitive ? 'font-mono' : '',
-            meta.sensitive && revealed !== null ? 'text-secret' : '',
+            meta.sensitive && !empty
+              ? 'bg-secret-bg text-secret-fg hover:brightness-[.97]'
+              : 'hover:bg-foreground/[.05]',
           ]"
           @click="edit"
         >
-          {{ shown }}</button
+          <span
+            :key="revealed ?? 'mask'"
+            :class="
+              meta.sensitive && revealed !== null ? 'anim-reveal' : meta.sensitive && !empty ? 'tracking-[.14em]' : ''
+            "
+            >{{ shown }}</span
+          ></button
         ><span
           v-else
-          class="min-w-0 flex-1 whitespace-pre-wrap break-all text-sm"
+          class="min-w-0 flex-1 rounded-lg px-2.5 py-1.5 text-sm break-all whitespace-pre-wrap"
           :class="[
             empty ? 'text-muted-foreground' : meta.mono || meta.sensitive ? 'font-mono' : '',
-            meta.sensitive && revealed !== null ? 'text-secret' : '',
+            meta.sensitive && !empty ? 'bg-secret-bg text-secret-fg' : '',
           ]"
-          >{{ shown }}</span
+          ><span :key="revealed ?? 'mask'" :class="meta.sensitive && revealed !== null && 'anim-reveal'">{{
+            shown
+          }}</span></span
         ><Button
           v-if="meta.sensitive && filled && meta.name !== 'totp_seed'"
           variant="ghost"
@@ -221,7 +241,16 @@ async function generated(value: string) {
           ><Copy class="size-4"
         /></Button>
       </template>
-      <PasswordGenerator v-if="meta.generator && !readOnly" @use="generated" />
+      <PasswordGenerator v-if="meta.generator && !readOnly" :disabled="hasValue" @use="generated" />
+    </div>
+    <div v-if="strength" class="mt-1.5 flex items-center gap-2">
+      <span class="bg-muted h-1 w-28 overflow-hidden rounded-full"
+        ><span
+          class="block h-1 rounded-full transition-[width] duration-500 ease-[cubic-bezier(.2,.8,.2,1)]"
+          :class="strengthTone[strength.score]"
+          :style="{ width: `${(strength.score + 1) * 25}%` }"
+      /></span>
+      <span class="text-muted-foreground text-[11px]">{{ strength.label }}</span>
     </div>
     <SecretHistory :record-id="recordId" :name="meta.name" :label="meta.label" v-model:open="historyOpen" />
   </div>

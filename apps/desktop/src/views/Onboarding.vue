@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Copy, Fingerprint, Printer, TriangleAlert } from '@lucide/vue'
+import CryptMark from '@/components/crypt/CryptMark.vue'
+import { Check, Copy, Fingerprint, Printer, TriangleAlert } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -23,6 +24,8 @@ const words = ref<string[]>([])
 const restoreText = ref('')
 const error = ref('')
 const busy = ref(false)
+const seedVisible = ref(false)
+const seedRecorded = ref(false)
 
 const steps = ['Хранилище', 'Сид-фраза', 'Проверка', 'Touch ID и PIN']
 
@@ -51,6 +54,8 @@ function fail(e: unknown) {
 }
 
 async function startCreate() {
+  seedVisible.value = false
+  seedRecorded.value = false
   mode.value = 'create'
   words.value = await api.generateSeed()
   error.value = ''
@@ -161,29 +166,31 @@ async function finish(destination = '/') {
 </script>
 
 <template>
-  <div class="h-full overflow-auto">
-    <div data-tauri-drag-region class="h-12" />
-    <ol class="mx-auto flex flex-wrap justify-center gap-2 px-4 text-[13px]" aria-label="Шаги">
-      <li
-        v-for="(label, i) in steps"
-        :key="label"
-        class="flex items-center gap-2"
-        :class="i + 1 === step ? 'text-foreground' : 'text-muted-foreground'"
-      >
-        <span
-          class="flex size-[22px] items-center justify-center rounded-full text-xs font-semibold"
-          :class="
-            i + 1 === step ? 'bg-foreground text-background' : i + 1 < step ? 'bg-muted text-foreground' : 'border'
-          "
+  <div class="flex h-full overflow-auto bg-background">
+    <aside class="hidden w-[300px] shrink-0 flex-col bg-sidebar p-9 text-sidebar-foreground sm:flex">
+      <div data-tauri-drag-region class="h-8" />
+      <CryptMark :size="64" />
+      <h2 class="mt-6 text-2xl font-semibold">Только у вас.</h2>
+      <p class="mt-3 text-sm text-sidebar-foreground/70">
+        Всё шифруется прямо на этом Mac. Ключ от хранилища — только в ваших руках.
+      </p>
+      <ol class="mt-12 space-y-7 border-l border-sidebar-border pl-5" aria-label="Шаги">
+        <li
+          v-for="(label, i) in steps"
+          :key="label"
+          class="flex items-center gap-3 text-sm"
+          :aria-current="i + 1 === step ? 'step' : undefined"
         >
-          {{ i + 1 }}
-        </span>
-        {{ label }}
-        <span v-if="i < steps.length - 1" class="ml-1 h-px w-8 bg-border" />
-      </li>
-    </ol>
-
-    <main class="mx-auto w-full max-w-[680px] px-4 pt-10 pb-8">
+          <span
+            class="flex size-7 items-center justify-center rounded-full border"
+            :class="i + 1 <= step ? 'bg-primary text-primary-foreground border-primary' : 'border-sidebar-border'"
+          >
+            <Check v-if="i + 1 < step" class="size-4" /><span v-else>{{ i + 1 }}</span> </span
+          >{{ label }}
+        </li>
+      </ol>
+    </aside>
+    <main class="mx-auto w-full max-w-[720px] px-8 pt-16 pb-8 anim-in">
       <!-- 1. Choose -->
       <section v-if="step === 1" class="space-y-6">
         <div>
@@ -202,6 +209,13 @@ async function finish(destination = '/') {
             <div class="text-muted-foreground mt-1 text-[13px]">Если фраза уже есть</div>
           </button>
         </div>
+        <button
+          class="w-full rounded-xl border bg-card p-5 text-left hover:border-primary"
+          @click="router.push('/restore')"
+        >
+          <div class="font-medium">Из бэкапа</div>
+          <div class="mt-1 text-[13px] text-muted-foreground">Восстановить всю базу из файла .cryptbackup</div>
+        </button>
       </section>
 
       <!-- 2a. Show seed -->
@@ -213,11 +227,13 @@ async function finish(destination = '/') {
             нигде не храним.
           </p>
         </div>
-        <ol class="bg-card/40 grid grid-cols-4 gap-2 rounded-xl border p-4 print:bg-white">
+        <Button v-if="!seedVisible" variant="outline" @click="seedVisible = true">Показать фразу</Button>
+        <ol v-if="seedVisible" class="bg-card/40 grid grid-cols-4 gap-2 rounded-xl border p-4 print:bg-white">
           <li
             v-for="(w, i) in words"
             :key="i"
-            class="bg-muted/60 flex h-[38px] items-center gap-2 rounded-md px-2.5 font-mono selectable"
+            :style="{ animationDelay: `${i * 25}ms` }"
+            class="anim-reveal bg-secret-bg text-secret-fg flex h-[38px] items-center gap-2 rounded-md px-2.5 font-mono selectable"
           >
             <span class="text-muted-foreground w-[18px] text-right text-xs">{{ i + 1 }}</span>
             <span>{{ w }}</span>
@@ -225,19 +241,22 @@ async function finish(destination = '/') {
         </ol>
         <div
           role="note"
-          class="flex gap-3 rounded-lg border border-amber-700/60 bg-amber-950/40 px-4 py-3.5 leading-relaxed text-amber-200"
+          class="flex gap-3 rounded-lg border border-border-strong bg-secret-bg px-4 py-3.5 leading-relaxed text-secret-fg"
         >
           <TriangleAlert class="mt-0.5 size-[18px] shrink-0" />
           Запишите на бумаге и храните офлайн. Не фотографируйте и не храните в заметках. Потеряете фразу — данные не
           восстановить никак.
         </div>
         <p v-if="error" class="text-destructive text-[13px] print:hidden">{{ error }}</p>
+        <label class="flex items-center gap-2 text-sm print:hidden">
+          <input v-model="seedRecorded" type="checkbox" :disabled="!seedVisible" /> Я записал(а) фразу
+        </label>
         <div class="flex flex-wrap items-center gap-3 print:hidden">
           <Button variant="outline" @click="step = 1">Назад</Button>
           <Button variant="outline" @click="copySeed"><Copy class="size-4" /> Скопировать</Button>
           <Button variant="outline" @click="printSeed"><Printer class="size-4" /> Распечатать</Button>
           <div class="flex-1" />
-          <Button @click="toVerify">Я записал — проверить</Button>
+          <Button :disabled="!seedVisible || !seedRecorded" @click="toVerify">Проверить</Button>
         </div>
       </section>
 
@@ -274,11 +293,24 @@ async function finish(destination = '/') {
             <Label :for="`w${k}`">Слово №{{ idx + 1 }}</Label>
             <Input
               :id="`w${k}`"
+              :aria-invalid="!!checkInput[k] && checkInput[k]!.trim().toLowerCase() !== words[idx]"
+              :class="
+                checkInput[k]
+                  ? checkInput[k]!.trim().toLowerCase() === words[idx]
+                    ? 'border-primary'
+                    : 'border-destructive'
+                  : ''
+              "
               v-model="checkInput[k]"
               class="font-mono"
               autocomplete="off"
               spellcheck="false"
               @keydown.enter="confirmVerify"
+            />
+            <Check
+              v-if="checkInput[k] && checkInput[k]!.trim().toLowerCase() === words[idx]"
+              class="size-4 text-primary"
+              aria-label="Слово совпадает"
             />
           </div>
         </div>
@@ -334,6 +366,9 @@ async function finish(destination = '/') {
                 autocomplete="off"
               />
             </div>
+            <p v-if="pin2" class="text-xs" :class="pinValid ? 'text-primary' : 'text-destructive'" role="status">
+              {{ pinValid ? 'PIN совпадает' : 'PIN должен совпадать и содержать от 6 до 12 цифр' }}
+            </p>
           </div>
         </div>
         <p class="text-sm text-muted-foreground">
