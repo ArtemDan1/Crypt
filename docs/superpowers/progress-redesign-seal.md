@@ -39,3 +39,5 @@ Task 14: complete — Onboarding: тест скрытия/подтвержден
 Task 15: Ruling: добавлены vault-unlocked и session-activity между окнами — иначе вход из трея не обновляет главное окно, а скрытый трей блокирует активную сессию своим таймером — цена ошибки: лишние события и рассинхронизация таймеров до 500 мс.
 Task 15: Ruling: нативная визуальная проверка трея отложена — в доступных инструментах нет управления окном/снимка macOS; автоматические Rust/TS проверки выполнены — цена ошибки: положение и закрытие окна требуют ручной проверки на Mac.
 Task 15: automated complete — recent RED→GREEN; shared activity RED→GREEN; vitest 64/64, build, prettier --check src, cargo test PASS; native smoke pending.
+Task 16: Ruling: визуальный обход светлой/тёмной темы и системного reduced-motion остаётся ручным — нет browser/computer инструмента для такого обхода — цена ошибки: визуальные регрессии могут остаться; автоматические тесты и численный контраст не заменяют обход.
+Task 16: automated complete — vitest 64/64, build, prettier --check src, cargo test PASS; contrast light background/card 5.31/5.55, dark 6.84/6.24; README updated; visual smoke pending.

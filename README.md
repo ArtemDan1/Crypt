@@ -6,7 +6,7 @@
 
 - Дизайн: `docs/specs/2026-10-28-crypt-design.md`
 - Планы: `docs/superpowers/plans/`
-- Макеты: https://claude.ai/artifact/6WNytj3nPs5x1k1EcEEg8U
+- Макеты: https://claude.ai/artifact/PCSwUujPE9RMxKYTJeKVua
 
 ## Структура
 
