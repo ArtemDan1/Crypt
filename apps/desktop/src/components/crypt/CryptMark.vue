@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<{ size?: number; animated?: boolean; deco
     :aria-hidden="props.decorative ? 'true' : undefined"
     class="shrink-0"
   >
-    <rect x="100" y="100" width="824" height="824" rx="185" fill="#1F1E1B" />
+    <rect x="100" y="100" width="824" height="824" rx="185" class="fill-[#1F1E1B] dark:fill-[#33322E]" />
     <g :class="props.animated && 'crypt-mark-sprout'">
       <template v-if="props.size >= 40">
         <path d="M512 196C716 336 716 660 512 828 308 660 308 336 512 196Z" fill="#12855F" />
