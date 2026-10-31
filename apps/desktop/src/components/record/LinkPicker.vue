@@ -53,8 +53,8 @@ const title = (id: Id) => lib.titleById.get(id)
     <span
       v-for="id in value"
       :key="id"
-      class="bg-card flex h-7 items-center gap-1.5 rounded-md border pr-1 pl-2 text-[13px]"
-      :class="secrets ? 'border-zinc-600' : ''"
+      class="flex h-[26px] items-center gap-1.5 rounded-[7px] pr-1 pl-2 text-[13px]"
+      :class="secrets ? 'bg-secret-bg text-secret-fg font-medium' : 'bg-card border'"
     >
       <SecretChip v-if="secrets" :id="id" />
       <RouterLink v-else-if="title(id) !== undefined" :to="`/r/${id}`" class="hover:underline">{{
@@ -72,7 +72,7 @@ const title = (id: Id) => lib.titleById.get(id)
     <Popover v-if="multiple || !value.length" v-model:open="open">
       <PopoverTrigger as-child>
         <button
-          class="text-muted-foreground hover:text-foreground flex h-7 items-center gap-1 rounded-md border border-dashed px-2 text-[13px]"
+          class="text-muted-foreground hover:text-foreground border-border-strong flex h-[26px] items-center gap-1 rounded-[7px] border border-dashed px-2 text-[13px]"
         >
           <Plus class="size-3.5" /> {{ secrets ? 'Привязать секрет' : 'Связать' }}
         </button>

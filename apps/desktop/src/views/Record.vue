@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
-import { ChevronRight, History, KeyRound, MoreHorizontal, Plus } from '@lucide/vue'
+import { Check, ChevronRight, History, KeyRound, LoaderCircle, MoreHorizontal, PanelRight, Plus } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import {
   DropdownMenu,
@@ -22,7 +22,11 @@ import { api, CryptApiError } from '@/lib/api'
 import { debouncedSaver } from '@/lib/debounce'
 import { formatValue } from '@/lib/fields'
 import { typeIcon } from '@/lib/icons'
-import type { FieldValue, Id, RecordSummary, RecordView } from '@/lib/types'
+import { kindMeta } from '@/lib/fieldKinds'
+import { VERSION_KIND } from '@/lib/versionKinds'
+import KindTile from '@/components/crypt/KindTile.vue'
+import { toneForType } from '@/lib/tones'
+import type { FieldValue, Id, RecordSummary, RecordVersion, RecordView } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
 import { useSession } from '@/stores/session'
 
@@ -40,6 +44,20 @@ const saving = ref(false)
 const savedAt = ref<number | null>(null)
 const showHidden = ref(false)
 const historyOpen = ref(false)
+const versions = ref<RecordVersion[]>([])
+const readInspector = () => {
+  try {
+    return localStorage.getItem('crypt.record.inspector') !== '0'
+  } catch {
+    return true
+  }
+}
+const inspector = ref(readInspector())
+watch(inspector, (v) => {
+  try {
+    localStorage.setItem('crypt.record.inspector', v ? '1' : '0')
+  } catch {}
+})
 
 const type = computed(() => (rec.value?.type_id ? lib.typeById.get(rec.value.type_id) : undefined))
 const folderPath = computed(() => {
@@ -77,6 +95,7 @@ async function load() {
     body.value = r.body
     savedAt.value = r.updated_at
     backlinks.value = await api.backlinks(props.id)
+    versions.value = (await api.recordVersions(props.id).catch(() => [])).slice(0, 3)
     // Link labels read titles from the library; make sure they are current.
     await lib.refreshAll()
   } catch (e) {
@@ -179,13 +198,29 @@ async function remove() {
         <span class="text-foreground truncate">{{ title || 'Без названия' }}</span>
       </nav>
       <div class="flex-1" />
-      <span class="text-muted-foreground text-xs whitespace-nowrap">
-        {{ saving ? 'Сохраняется…' : savedAt ? `Сохранено · ${timeFmt.format(savedAt)}` : '' }}
+      <span v-if="saving" class="text-muted-foreground flex items-center gap-1.5 text-xs whitespace-nowrap">
+        <LoaderCircle class="size-3 animate-spin" /> Сохраняется…
       </span>
+      <span
+        v-else-if="savedAt"
+        :key="savedAt"
+        class="anim-in text-muted-foreground flex items-center gap-1.5 text-xs whitespace-nowrap"
+      >
+        <Check class="text-primary size-3.5" :stroke-width="2.6" /> Сохранено · {{ timeFmt.format(savedAt) }}
+      </span>
+      <button
+        class="text-muted-foreground hover:bg-foreground/[.08] flex size-8 items-center justify-center rounded-lg transition-colors"
+        :class="inspector && 'bg-accent'"
+        aria-label="Панель связей"
+        :aria-pressed="inspector"
+        @click="inspector = !inspector"
+      >
+        <PanelRight class="size-4" />
+      </button>
       <DropdownMenu>
         <DropdownMenuTrigger as-child>
           <button
-            class="hover:bg-accent flex size-8 items-center justify-center rounded-md border"
+            class="text-muted-foreground hover:bg-foreground/[.08] aria-expanded:bg-accent flex size-8 items-center justify-center rounded-lg transition-colors"
             aria-label="Действия с записью"
           >
             <MoreHorizontal class="size-4" />
@@ -225,13 +260,13 @@ async function remove() {
             <RouterLink
               v-if="type"
               :to="`/t/${type.id}`"
-              class="text-foreground/80 hover:bg-accent flex h-6 items-center gap-1.5 rounded-md border px-2 text-xs"
+              class="bg-primary-soft text-primary-soft-fg flex h-[26px] items-center gap-1.5 rounded-[7px] pr-2.5 pl-1 text-xs font-medium transition hover:brightness-95"
             >
-              <component :is="typeIcon(type.icon)" class="size-3.5" /> {{ type.name }}
+              <KindTile :icon="typeIcon(type.icon)" :tone="toneForType(lib.types, type.id)" size="sm" /> {{ type.name }}
             </RouterLink>
             <span
               v-if="rec.secret_kind"
-              class="text-secret flex h-6 items-center gap-1.5 rounded-md border px-2 text-xs"
+              class="bg-secret-bg text-secret-fg flex h-[26px] items-center gap-1.5 rounded-[7px] px-2.5 text-xs font-medium"
             >
               <KeyRound class="size-3.5" /> Секрет
             </span>
@@ -256,7 +291,7 @@ async function remove() {
             v-model="title"
             placeholder="Без названия"
             aria-label="Заголовок"
-            class="placeholder:text-muted-foreground/60 mb-6 w-full bg-transparent text-[32px] font-semibold tracking-tight outline-none"
+            class="placeholder:text-muted-foreground/60 mb-6 w-full bg-transparent text-[34px] font-semibold tracking-[-.025em] outline-none"
             @blur="commitTitle"
             @keydown.enter.prevent="($event.target as HTMLInputElement).blur()"
           />
@@ -264,10 +299,13 @@ async function remove() {
           <section
             v-if="type?.fields.length"
             aria-label="Поля"
-            class="mb-6 grid grid-cols-[160px_minmax(0,1fr)] items-start gap-x-4 gap-y-0.5 border-b pb-6"
+            class="-mx-2.5 mb-6 grid grid-cols-[160px_minmax(0,1fr)] items-start gap-y-0.5 border-b pb-6"
           >
             <template v-for="f in type.fields" :key="f.id">
-              <div class="text-muted-foreground flex min-h-[30px] items-center truncate">{{ f.name }}</div>
+              <div class="text-muted-foreground flex min-h-[34px] items-center gap-2 truncate pl-2.5 text-[13px]">
+                <span class="w-4 shrink-0 text-center font-mono text-[11px]">{{ kindMeta(f.kind.kind).glyph }}</span
+                >{{ f.name }}
+              </div>
               <FieldEditor
                 :field="f"
                 :value="rec.fields[f.id]"
@@ -300,7 +338,8 @@ async function remove() {
 
       <aside
         aria-label="Связи"
-        class="bg-card/30 hidden w-[300px] shrink-0 flex-col gap-6 overflow-auto border-l p-5 lg:flex"
+        class="bg-background hidden shrink-0 flex-col gap-6 overflow-x-hidden overflow-y-auto border-l transition-[width,opacity] duration-400 ease-[cubic-bezier(.2,.8,.2,1)] lg:flex"
+        :class="inspector ? 'w-[280px] p-5 opacity-100' : 'w-0 border-l-0 p-0 opacity-0'"
       >
         <section>
           <h3 class="text-muted-foreground mb-2.5 text-xs font-medium tracking-wider uppercase">
@@ -311,7 +350,7 @@ async function remove() {
               v-for="b in backlinks"
               :key="b.id"
               :to="`/r/${b.id}`"
-              class="bg-card hover:bg-accent rounded-md px-2.5 py-2"
+              class="bg-card hover:bg-accent rounded-[9px] border px-3 py-2.5 transition-colors"
             >
               <div class="font-medium">{{ b.title || 'Без названия' }}</div>
               <div v-if="b.type_id" class="text-muted-foreground mt-0.5 text-xs">
@@ -329,8 +368,20 @@ async function remove() {
             <dt class="text-muted-foreground">Изменено</dt>
             <dd>{{ dateFmt.format(rec.updated_at) }}</dd>
           </dl>
+          <ol v-if="versions.length" class="mt-4 flex flex-col">
+            <li v-for="(v, i) in versions" :key="v.id" class="grid grid-cols-[14px_minmax(0,1fr)] gap-2.5">
+              <span class="flex flex-col items-center">
+                <span class="mt-1 size-[9px] rounded-full" :class="i === 0 ? 'bg-primary' : 'bg-border-strong'" />
+                <span v-if="i < versions.length - 1" class="bg-border w-px flex-1" />
+              </span>
+              <span class="flex flex-col pb-3">
+                <span class="text-[13px] font-medium">{{ VERSION_KIND[v.kind] ?? 'Изменения' }}</span>
+                <span class="text-muted-foreground text-xs">{{ dateFmt.format(v.at) }}</span>
+              </span>
+            </li>
+          </ol>
           <button
-            class="text-muted-foreground hover:text-foreground mt-3 flex items-center gap-1.5 text-[13px]"
+            class="text-muted-foreground hover:text-foreground mt-1 flex items-center gap-1.5 text-[13px]"
             @click="openHistory"
           >
             <History class="size-3.5" /> История версий

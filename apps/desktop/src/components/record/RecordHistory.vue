@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { VERSION_KIND as KIND } from '@/lib/versionKinds'
 import { computed, ref, watch } from 'vue'
 import { History, Monitor, RotateCcw, Smartphone } from '@lucide/vue'
 import { toast } from 'vue-sonner'
@@ -15,19 +16,6 @@ const open = defineModel<boolean>('open', { required: true })
 const emit = defineEmits<{ reverted: [] }>()
 const lib = useLibrary()
 
-const KIND: Record<string, string> = {
-  create: 'Создание',
-  title: 'Название',
-  body: 'Текст',
-  type: 'Тип',
-  folder: 'Папка',
-  tags: 'Теги',
-  fields: 'Поля',
-  trash: 'Корзина',
-  secret: 'Секретные поля',
-  agent: 'ssh-agent',
-  revert: 'Возврат версии',
-}
 const fmt = new Intl.DateTimeFormat('ru', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 const versions = ref<RecordVersion[]>([])
@@ -73,21 +61,21 @@ const isLatest = computed(() => selected.value?.id === versions.value[0]?.id)
 const typeOf = computed(() => (old.value?.type_id ? lib.typeById.get(old.value.type_id) : undefined))
 const show = (v: FieldValue | undefined, id: string) => {
   if (!v) return '—'
-  const field = typeOf.value?.fields.find((f) => f.id === id) ?? lib.typeById.get(props.current.type_id ?? '')?.fields.find((f) => f.id === id)
-  return (
-    (field ? formatValue(v, field.kind, { titleOf: (x) => lib.titleById.get(x) }) : JSON.stringify(v.value)) || '—'
-  )
+  const field =
+    typeOf.value?.fields.find((f) => f.id === id) ??
+    lib.typeById.get(props.current.type_id ?? '')?.fields.find((f) => f.id === id)
+  return (field ? formatValue(v, field.kind, { titleOf: (x) => lib.titleById.get(x) }) : JSON.stringify(v.value)) || '—'
 }
 const fieldName = (id: string) =>
-  [typeOf.value, lib.typeById.get(props.current.type_id ?? '')]
-    .flatMap((t) => t?.fields ?? [])
-    .find((f) => f.id === id)?.name ?? 'Удалённое поле'
+  [typeOf.value, lib.typeById.get(props.current.type_id ?? '')].flatMap((t) => t?.fields ?? []).find((f) => f.id === id)
+    ?.name ?? 'Удалённое поле'
 const changes = computed(() => {
   const o = old.value
   const c = props.current
   if (!o) return []
   const out: { label: string; now: string; then: string }[] = []
-  if (o.title !== c.title) out.push({ label: 'Название', now: c.title || 'Без названия', then: o.title || 'Без названия' })
+  if (o.title !== c.title)
+    out.push({ label: 'Название', now: c.title || 'Без названия', then: o.title || 'Без названия' })
   if (o.type_id !== c.type_id)
     out.push({
       label: 'Тип',
@@ -95,7 +83,11 @@ const changes = computed(() => {
       then: lib.typeById.get(o.type_id ?? '')?.name ?? (o.type_id ? 'Удалённый тип' : 'Без типа'),
     })
   if (o.tags.join() !== c.tags.join())
-    out.push({ label: 'Теги', now: c.tags.map((t) => `#${t}`).join(' ') || '—', then: o.tags.map((t) => `#${t}`).join(' ') || '—' })
+    out.push({
+      label: 'Теги',
+      now: c.tags.map((t) => `#${t}`).join(' ') || '—',
+      then: o.tags.map((t) => `#${t}`).join(' ') || '—',
+    })
   const nowFields = { ...c.hidden_fields, ...c.fields }
   const oldFields = { ...o.hidden_fields, ...o.fields }
   for (const id of new Set([...Object.keys(nowFields), ...Object.keys(oldFields)]))
@@ -143,7 +135,9 @@ async function revert() {
               :aria-current="selected?.id === v.id ? 'true' : undefined"
               @click="pick(v)"
             >
-              <span class="font-medium">{{ fmt.format(v.at) }}<span v-if="i === 0" class="text-secret"> · сейчас</span></span>
+              <span class="font-medium"
+                >{{ fmt.format(v.at) }}<span v-if="i === 0" class="text-secret"> · сейчас</span></span
+              >
               <span class="text-muted-foreground flex items-center gap-1 text-xs">
                 <component :is="v.this_device ? Monitor : Smartphone" class="size-3" />
                 {{ KIND[v.kind] ?? 'Изменения' }}
@@ -158,7 +152,9 @@ async function revert() {
               <p v-if="isLatest" class="text-muted-foreground text-[13px]">Это текущее состояние записи.</p>
               <p v-else-if="!changes.length && !bodyChanged" class="text-muted-foreground text-[13px]">
                 Видимое содержимое не отличается от текущего{{
-                  selected.kind === 'secret' ? ': менялись секретные поля, их прошлые значения — в «Истории» самого поля' : ''
+                  selected.kind === 'secret'
+                    ? ': менялись секретные поля, их прошлые значения — в «Истории» самого поля'
+                    : ''
                 }}.
               </p>
               <section v-if="!isLatest && changes.length">
@@ -178,9 +174,7 @@ async function revert() {
               </section>
               <section v-if="!isLatest && bodyChanged">
                 <h4 class="text-muted-foreground mb-2 text-xs font-medium tracking-wider uppercase">Текст</h4>
-                <pre
-                  class="overflow-x-auto rounded-md border font-sans text-[13px] leading-relaxed"
-                ><div
+                <pre class="overflow-x-auto rounded-md border font-sans text-[13px] leading-relaxed"><div
                   v-for="(p, i) in body"
                   :key="i"
                   class="px-3 whitespace-pre-wrap"
