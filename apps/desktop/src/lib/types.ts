@@ -300,3 +300,11 @@ export interface OtpImportReport {
 export interface BackupInspection extends BackupHeader {
   bytes: number
 }
+
+export interface UpdateInfo {
+  version: string
+  pkgUrl: string
+  releaseUrl: string
+  size: number
+  notes: string
+}

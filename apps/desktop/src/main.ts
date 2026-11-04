@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import { listen } from '@tauri-apps/api/event'
 import { api } from './lib/api'
 import { initTheme } from './lib/theme'
+import { watchPlainTyping } from './lib/plainTyping'
 import type { VaultStatus } from './lib/types'
 import './styles.css'
 import 'vue-sonner/style.css'
@@ -20,6 +21,9 @@ if (!import.meta.env.DEV)
     const target = e.target as HTMLElement | null
     if (!e.defaultPrevented && !target?.closest('input, textarea, [contenteditable="true"]')) e.preventDefault()
   })
+
+// No auto-capitalisation or autocorrect in fields ("root" must not become "Root").
+watchPlainTyping()
 
 async function boot() {
   // Browser preview without Tauri: in-memory backend for UI work.

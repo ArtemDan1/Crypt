@@ -4,7 +4,8 @@
   "description": "enables the default permissions",
   "windows": [
     "main",
-    "tray"
+    "tray",
+    "w-*"
   ],
   "permissions": [
     "core:default",
@@ -12,6 +13,16 @@
     "opener:allow-reveal-item-in-dir",
     "autostart:default",
     "dialog:allow-open",
-    "dialog:allow-save"
+    "dialog:allow-save",
+    "core:window:allow-close",
+    "core:window:allow-destroy",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        {
+          "url": "https://github.com/ArtemDan1/Crypt/*"
+        }
+      ]
+    }
   ]
 }

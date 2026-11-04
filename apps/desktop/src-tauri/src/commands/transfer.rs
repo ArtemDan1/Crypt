@@ -227,7 +227,7 @@ mod source_tests {
             serde_json::to_value(&p).unwrap()["skippedDetails"][0],
             serde_json::json!([3, "NoPassword"])
         );
-        let report = import_csv_file(&st, path, "Browser").unwrap();
+        let report = import_csv_file(&st, path).unwrap();
         assert_eq!(report.report.imported, 1);
         assert_eq!(report.report.skipped.len(), 1);
         assert_eq!(st.vault_guard().as_ref().unwrap().snapshots().len(), 1);
@@ -245,9 +245,9 @@ mod source_tests {
         )
         .unwrap();
         assert_eq!(preview.rows.len(), 1);
-        let r = import_otp_pending(&st, &preview.token, "2FA").unwrap();
+        let r = import_otp_pending(&st, &preview.token).unwrap();
         assert_eq!(r.report.created, 1);
-        assert!(import_otp_pending(&st, &preview.token, "2FA").is_err());
+        assert!(import_otp_pending(&st, &preview.token).is_err());
         let _p = preview_otp_source(
             &st,
             OtpSource::Aegis {
@@ -256,7 +256,7 @@ mod source_tests {
             },
         )
         .unwrap();
-        assert!(import_otp_pending(&st, "wrong", "2FA").is_err());
+        assert!(import_otp_pending(&st, "wrong").is_err());
         assert!(st.pending_otp.lock().unwrap().is_none());
         let p = preview_otp_source(
             &st,
@@ -268,7 +268,7 @@ mod source_tests {
         .unwrap();
         st.pending_otp.lock().unwrap().as_mut().unwrap().created =
             std::time::Instant::now() - OTP_TTL - std::time::Duration::from_secs(1);
-        assert!(import_otp_pending(&st, &p.token, "2FA").is_err());
+        assert!(import_otp_pending(&st, &p.token).is_err());
         assert!(st.pending_otp.lock().unwrap().is_none());
     }
     #[test]
@@ -343,11 +343,7 @@ pub fn preview_csv_file(st: &AppState, path: &str) -> ApiResult<BrowserPreview> 
         skipped_details: parsed.skipped,
     })
 }
-pub fn import_csv_file(
-    st: &AppState,
-    path: &str,
-    folder: &str,
-) -> ApiResult<Imported<LoginImportReport>> {
+pub fn import_csv_file(st: &AppState, path: &str) -> ApiResult<Imported<LoginImportReport>> {
     let bytes = read_limited(path)?;
     let parsed = parse_browser_csv(&bytes)?;
     with_vault(st, |v| {
@@ -355,7 +351,7 @@ pub fn import_csv_file(
             v,
             format!("Перед импортом {}", file_name(path)),
             |v| {
-                let mut report = v.import_logins(parsed.logins, folder)?;
+                let mut report = v.import_logins(parsed.logins)?;
                 report.skipped = parsed.skipped;
                 Ok(report)
             },
@@ -484,11 +480,7 @@ pub fn preview_otp_source(st: &AppState, source: OtpSource) -> ApiResult<OtpPrev
     };
     store_otp_preview(st, parsed, epoch)
 }
-pub fn import_otp_pending(
-    st: &AppState,
-    token: &str,
-    folder: &str,
-) -> ApiResult<Imported<OtpImportReport>> {
+pub fn import_otp_pending(st: &AppState, token: &str) -> ApiResult<Imported<OtpImportReport>> {
     with_vault(st, |v| {
         let pending = st
             .pending_otp
@@ -506,7 +498,7 @@ pub fn import_otp_pending(
             ));
         }
         with_snapshot(v, "Перед импортом 2FA".into(), |v| {
-            let mut report = v.import_otp(pending.parsed.drafts, folder)?;
+            let mut report = v.import_otp(pending.parsed.drafts)?;
             report.skipped = pending.parsed.skipped;
             report.missing_batches = pending.parsed.missing_batches;
             Ok(report)
@@ -527,10 +519,9 @@ pub async fn preview_browser_csv(
 pub async fn import_browser_csv(
     st: State<'_, Arc<AppState>>,
     path: String,
-    folder: String,
 ) -> ApiResult<Imported<LoginImportReport>> {
     let st = st.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || import_csv_file(&st, &path, &folder))
+    tauri::async_runtime::spawn_blocking(move || import_csv_file(&st, &path))
         .await
         .map_err(|_| ApiError::new("Internal", "Внутренняя ошибка"))?
 }
@@ -560,10 +551,9 @@ pub async fn preview_otp(st: State<'_, Arc<AppState>>, source: OtpSource) -> Api
 pub async fn import_otp(
     st: State<'_, Arc<AppState>>,
     token: String,
-    folder: String,
 ) -> ApiResult<Imported<OtpImportReport>> {
     let st = st.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || import_otp_pending(&st, &token, &folder))
+    tauri::async_runtime::spawn_blocking(move || import_otp_pending(&st, &token))
         .await
         .map_err(|_| ApiError::new("Internal", "Внутренняя ошибка"))?
 }

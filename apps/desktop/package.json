@@ -1,7 +1,7 @@
 {
   "name": "crypt-desktop",
   "private": true,
-  "version": "1.0.0",
+  "version": "2026.11.4",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,9 @@
     "tauri": "tauri",
     "test": "vitest run",
     "format": "prettier --write src",
-    "format:check": "prettier --check src"
+    "format:check": "prettier --check src",
+    "version:date": "node scripts/version-date.mjs",
+    "pkg": "scripts/make-pkg.sh"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",

@@ -19,6 +19,14 @@ pub fn menu_action(id: &str) -> Option<MenuAction> {
         "app-new-folder" => MenuAction::Ui("new-folder"),
         "app-search" => MenuAction::Ui("search"),
         "app-settings" => MenuAction::Ui("settings"),
+        "app-new-tab" => MenuAction::Ui("new-tab"),
+        "app-new-window" => MenuAction::Ui("new-window"),
+        "app-close-tab" => MenuAction::Ui("close-tab"),
+        "app-close-window" => MenuAction::Ui("close-window"),
+        "app-back" => MenuAction::Ui("back"),
+        "app-forward" => MenuAction::Ui("forward"),
+        "app-next-tab" => MenuAction::Ui("next-tab"),
+        "app-prev-tab" => MenuAction::Ui("prev-tab"),
         _ => return None,
     })
 }
@@ -53,12 +61,16 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
         "Файл",
         true,
         &[
+            &item("app-new-tab", "Новая вкладка", "CmdOrCtrl+T")?,
+            &item("app-new-window", "Новое окно", "CmdOrCtrl+Alt+N")?,
+            &sep()?,
             &item("app-new-record", "Новая запись", "CmdOrCtrl+N")?,
             &item("app-new-folder", "Новая папка", "CmdOrCtrl+Shift+N")?,
             &sep()?,
             &item("app-lock", "Заблокировать", "CmdOrCtrl+L")?,
             &sep()?,
-            &PredefinedMenuItem::close_window(app, Some("Закрыть окно"))?,
+            &item("app-close-tab", "Закрыть вкладку", "CmdOrCtrl+W")?,
+            &item("app-close-window", "Закрыть окно", "CmdOrCtrl+Shift+W")?,
         ],
     )?;
     let edit = Submenu::with_items(
@@ -82,6 +94,12 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
         &[
             &item("app-search", "Поиск", "CmdOrCtrl+K")?,
             &sep()?,
+            &item("app-back", "Назад", "CmdOrCtrl+[")?,
+            &item("app-forward", "Вперёд", "CmdOrCtrl+]")?,
+            &sep()?,
+            &item("app-next-tab", "Следующая вкладка", "Ctrl+Tab")?,
+            &item("app-prev-tab", "Предыдущая вкладка", "Ctrl+Shift+Tab")?,
+            &sep()?,
             &PredefinedMenuItem::fullscreen(app, Some("Во весь экран"))?,
         ],
     )?;
@@ -101,8 +119,12 @@ pub fn init(app: &AppHandle) -> tauri::Result<()> {
     app.on_menu_event(|app, event| match menu_action(event.id().as_ref()) {
         Some(MenuAction::Lock) => crate::autolock::lock_from_system(app),
         Some(MenuAction::Ui(action)) => {
-            crate::tray::show(app);
-            let _ = app.emit("menu-action", action);
+            // Each window has its own tabs: act in the one in front.
+            let target = crate::windows::focused_app_window(app).unwrap_or_else(|| {
+                crate::tray::show(app);
+                "main".into()
+            });
+            let _ = app.emit_to(target.as_str(), "menu-action", action);
         }
         None => {}
     });
@@ -123,6 +145,8 @@ mod tests {
             menu_action("app-settings"),
             Some(MenuAction::Ui("settings"))
         );
+        assert_eq!(menu_action("app-new-tab"), Some(MenuAction::Ui("new-tab")));
+        assert_eq!(menu_action("app-back"), Some(MenuAction::Ui("back")));
         // Tray ids must not trigger app actions.
         assert_eq!(menu_action("lock"), None);
         assert_eq!(menu_action("quit"), None);

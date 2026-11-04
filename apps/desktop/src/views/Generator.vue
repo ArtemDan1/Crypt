@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavArrows from '@/components/NavArrows.vue'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { Check, ChevronRight, Copy, KeyRound, RefreshCw } from '@lucide/vue'
@@ -132,7 +133,8 @@ async function saveAsSecret() {
 
 <template>
   <div class="flex h-full flex-col">
-    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-2.5 border-b pr-5 pl-7">
+    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-2.5 border-b pr-5 pl-5">
+      <NavArrows />
       <RouterLink to="/secrets" class="text-muted-foreground hover:text-foreground text-[13px]">Секреты</RouterLink>
       <ChevronRight class="text-muted-foreground size-3" />
       <span class="flex-1 text-[13px]">Генератор паролей</span>

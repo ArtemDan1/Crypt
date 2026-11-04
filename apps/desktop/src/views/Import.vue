@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavArrows from '@/components/NavArrows.vue'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { isTauri } from '@tauri-apps/api/core'
 import { getCurrentWebview } from '@tauri-apps/api/webview'
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input'
 import SegmentedControl from '@/components/crypt/SegmentedControl.vue'
 import LegacyImport from '@/components/LegacyImport.vue'
 import SshImportDialog from '@/components/secret/SshImportDialog.vue'
-import { IMPORT_SOURCES, defaultImportFolder, type ImportSource } from '@/lib/importSources'
+import { IMPORT_SOURCES, type ImportSource } from '@/lib/importSources'
 import { api, CryptApiError } from '@/lib/api'
 import type { BrowserPreview, OtpPreview, OtpSource, SshImportResult } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
@@ -23,7 +24,6 @@ const busy = ref(false),
   paths = ref<string[]>([]),
   password = ref(''),
   needsPassword = ref(false),
-  folder = ref(''),
   sshOpen = ref(false)
 const csv = ref<BrowserPreview | null>(null),
   otp = ref<OtpPreview | null>(null),
@@ -63,7 +63,6 @@ function choose(source: ImportSource) {
   cancellation = api.cancelOtpImport().catch(() => {})
   selected.value = source
   step.value = 'instruction'
-  folder.value = defaultImportFolder(source.group === groups[0] ? 'browser' : 'otp', new Date())
 }
 function tab(id: string) {
   const source = IMPORT_SOURCES.find((s) => s.id === id)
@@ -142,13 +141,13 @@ async function pick() {
   }
 }
 async function run() {
-  if (busy.value || !folder.value.trim() || !total.value) return
+  if (busy.value || !total.value) return
   const seq = request
   busy.value = true
   error.value = ''
   try {
     if (csv.value) {
-      const r = await api.importBrowserCsv(paths.value[0]!, folder.value.trim())
+      const r = await api.importBrowserCsv(paths.value[0]!)
       if (!active || seq !== request) return
       summary.value = `Импортировано логинов: ${r.report.imported}`
       details.value = [
@@ -157,7 +156,7 @@ async function run() {
         `Снимок для отката: ${r.snapshot}`,
       ]
     } else if (otp.value) {
-      const r = await api.importOtp(otp.value.token, folder.value.trim())
+      const r = await api.importOtp(otp.value.token)
       if (!active || seq !== request) return
       summary.value = `Добавлено к логинам: ${r.report.attached} · новых секретов: ${r.report.created}`
       details.value = [
@@ -230,7 +229,8 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="flex h-full flex-col">
-    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center border-b px-7">
+    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-3 border-b pr-7 pl-5">
+      <NavArrows />
       <h1 class="text-[17px] font-semibold">Импорт</h1>
       <span class="ml-auto text-xs text-muted-foreground">Всё обрабатывается на этом Mac</span>
     </header>
@@ -357,16 +357,10 @@ onBeforeUnmount(() => {
               Не хватает QR {{ index }} из {{ size }}
             </li>
           </ul>
-          <label class="block space-y-2 text-sm"
-            >Папка назначения<Input
-              v-model="folder"
-              list="import-folders"
-              :disabled="busy"
-              aria-label="Папка назначения" /><datalist id="import-folders">
-              <option v-for="f in lib.folders.filter((f) => !f.parent)" :key="f.id" :value="f.name" /></datalist
-          ></label>
-          <p class="text-xs text-muted-foreground">Перед записью создадим снимок для отката.</p>
-          <Button :disabled="busy || !total || !folder.trim()" @click="run">{{
+          <p class="text-xs text-muted-foreground">
+            Всё попадёт в «Секреты». Перед записью создадим снимок для отката.
+          </p>
+          <Button :disabled="busy || !total" @click="run">{{
             busy ? 'Импортируем…' : `Импортировать (${total})`
           }}</Button>
         </template>

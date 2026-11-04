@@ -10,6 +10,7 @@ import AutolockRing from '@/components/crypt/AutolockRing.vue'
 import { api } from '@/lib/api'
 import { toast } from 'vue-sonner'
 import { typeIcon } from '@/lib/icons'
+import { ROOT_TITLE } from '@/lib/pageInfo'
 import { useLibrary } from '@/stores/library'
 import { useSession } from '@/stores/session'
 
@@ -194,10 +195,11 @@ defineExpose({ newFolder })
         </div>
         <RouterLink
           to="/"
-          class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 font-mono transition-colors"
+          class="flex h-[30px] items-center gap-2.5 rounded-[7px] px-2 transition-colors"
           :class="row(isActive('/'))"
         >
-          <FolderRoot class="size-4" :class="isActive('/') ? 'text-primary' : 'text-muted-foreground'" /> /
+          <FolderRoot class="size-4" :class="isActive('/') ? 'text-primary' : 'text-muted-foreground'" />
+          {{ ROOT_TITLE }}
         </RouterLink>
         <FolderTree ref="tree" :parent="null" :depth="0" :active-id="activeFolder" :active-record-id="activeRecord" />
         <p

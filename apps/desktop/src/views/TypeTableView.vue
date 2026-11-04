@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import NavArrows from '@/components/NavArrows.vue'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowDown, ArrowUpRight, KeyRound, ListFilter, Plus, Search, X } from '@lucide/vue'
@@ -214,8 +216,9 @@ const selectIds = (v: FieldValue | undefined) =>
 
 <template>
   <div v-if="type" class="flex h-full flex-col">
-    <header data-tauri-drag-region class="shrink-0 border-b pr-5 pl-7">
+    <header data-tauri-drag-region class="shrink-0 border-b pr-5 pl-5">
       <div class="flex h-16 flex-wrap items-center gap-3">
+        <NavArrows />
         <KindTile :icon="typeIcon(type.icon)" :tone="toneForType(lib.types, type.id)" size="lg" />
         <h1 class="text-[22px] font-semibold tracking-[-.02em]">{{ type.name }}</h1>
         <span class="text-muted-foreground text-[13px]">{{ shown.length }} из {{ rows.length }}</span>
@@ -306,18 +309,24 @@ const selectIds = (v: FieldValue | undefined) =>
             </button>
           </PopoverTrigger>
           <PopoverContent align="start" class="flex w-72 flex-col gap-2 p-3">
-            <select v-model="newFilter.col" class="bg-card h-8 rounded-md border px-2 text-[13px]" aria-label="Колонка">
-              <option v-for="c in cfg.columns.filter((c) => c !== 'folder')" :key="c" :value="c">
-                {{ columnLabel(c, type) }}
-              </option>
-            </select>
-            <select v-model="newFilter.op" class="bg-card h-8 rounded-md border px-2 text-[13px]" aria-label="Условие">
-              <option v-for="(label, op) in OP_LABEL" :key="op" :value="op">{{ label }}</option>
-            </select>
+            <Select v-model="newFilter.col">
+              <SelectTrigger class="w-full text-[13px]" aria-label="Колонка"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="c in cfg.columns.filter((c) => c !== 'folder')" :key="c" :value="c">
+                  {{ columnLabel(c, type) }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <Select v-model="newFilter.op">
+              <SelectTrigger class="w-full text-[13px]" aria-label="Условие"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="(label, op) in OP_LABEL" :key="op" :value="op">{{ label }}</SelectItem>
+              </SelectContent>
+            </Select>
             <input
               v-if="newFilter.op === 'eq' || newFilter.op === 'contains'"
               v-model="newFilter.value"
-              class="h-8 rounded-md border bg-transparent px-2 text-[13px] outline-none"
+              class="border-input focus-visible:border-ring focus-visible:ring-ring/50 dark:bg-input/30 h-8 rounded-lg border bg-transparent px-2.5 text-[13px] outline-none focus-visible:ring-3"
               placeholder="Значение"
               aria-label="Значение"
               @keydown.enter="addFilter"

@@ -9,11 +9,15 @@ import { typeIcon } from '@/lib/icons'
 import type { SearchHit } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
 import { useSession } from '@/stores/session'
+import { useTabs } from '@/stores/tabs'
 
 const open = defineModel<boolean>('open', { required: true })
 const router = useRouter()
 const lib = useLibrary()
 const session = useSession()
+const tabs = useTabs()
+// Modifiers of the Enter / click that picked an item: ⌘ → new tab, ⌘⌥ → new window.
+let mods: { metaKey: boolean; altKey: boolean } | undefined
 
 const query = ref('')
 const hits = ref<SearchHit[]>([])
@@ -70,7 +74,7 @@ watch(open, async (o) => {
 
 function go(path: string) {
   open.value = false
-  router.push(path)
+  tabs.follow(path, mods)
 }
 async function newRecord() {
   open.value = false
@@ -86,7 +90,9 @@ function onKey(e: KeyboardEvent) {
     active.value = (active.value - 1 + n) % Math.max(n, 1)
     e.preventDefault()
   } else if (e.key === 'Enter') {
+    mods = e
     items.value[active.value]?.run()
+    mods = undefined
     e.preventDefault()
   }
 }
@@ -132,7 +138,7 @@ function onKey(e: KeyboardEvent) {
             class="flex min-h-10 w-full items-center gap-3 rounded-lg px-2.5 py-1.5 text-left transition-colors"
             :class="i === active ? 'bg-accent' : ''"
             @mousemove="active = i"
-            @click="it.run()"
+            @click="((mods = $event), it.run(), (mods = undefined))"
           >
             <component :is="it.icon" class="text-muted-foreground size-4 shrink-0" />
             <span class="min-w-0 flex-1">
@@ -151,7 +157,7 @@ function onKey(e: KeyboardEvent) {
         </p>
       </div>
       <div class="text-muted-foreground flex gap-4 border-t px-[18px] py-2.5 font-mono text-xs">
-        <span>↑↓ выбрать</span><span>↵ открыть</span><span>esc закрыть</span>
+        <span>↑↓ выбрать</span><span>↵ открыть</span><span>⌘↵ в новой вкладке</span><span>esc закрыть</span>
       </div>
     </DialogContent>
   </Dialog>

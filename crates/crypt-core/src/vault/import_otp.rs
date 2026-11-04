@@ -684,11 +684,11 @@ mod tests {
             .unwrap();
         assert!(matches!(v.preview_otp(&parse())[0].target, OtpTarget::New));
         v.delete(&duplicate).unwrap();
-        let report = v.import_otp(parse(), "2FA").unwrap();
+        let report = v.import_otp(parse()).unwrap();
         assert_eq!(report.attached, 1);
         assert!(v.secret_value(&id, "totp_seed").unwrap().is_some());
         assert!(matches!(v.preview_otp(&parse())[0].target, OtpTarget::New));
-        assert_eq!(v.import_otp(parse(), "2FA").unwrap().created, 1);
+        assert_eq!(v.import_otp(parse()).unwrap().created, 1);
     }
 }
 

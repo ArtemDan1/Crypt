@@ -41,6 +41,13 @@ impl Settings {
     }
 }
 
+/// One graceful lock: which app windows still have to report their saves.
+pub struct FlushWaiter {
+    pub token: String,
+    pub pending: std::collections::HashSet<String>,
+    pub done: mpsc::Sender<()>,
+}
+
 pub struct AppState {
     pub pending_otp: Mutex<Option<crate::commands::transfer::PendingOtp>>,
     pub otp_generation: std::sync::atomic::AtomicU64,
@@ -58,7 +65,7 @@ pub struct AppState {
     pub keys: Box<dyn KeyStore>,
     pub auth: Box<dyn Authenticator>,
     /// Set while a graceful lock waits for the frontend to flush pending saves.
-    pub flush_waiter: Mutex<Option<(String, mpsc::Sender<()>)>>,
+    pub flush_waiter: Mutex<Option<FlushWaiter>>,
     pub lock_requests: Mutex<()>,
 }
 impl AppState {

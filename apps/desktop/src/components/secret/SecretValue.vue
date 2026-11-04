@@ -85,6 +85,8 @@ const strength = computed(() => {
 // Never let the generator overwrite an existing value: the field has to be cleared first.
 const hasValue = computed(() => (editing.value ? draft.value.length > 0 : !empty.value))
 const strengthTone = ['bg-destructive', 'bg-secret', 'bg-primary', 'bg-primary']
+// Protected note: free text, shown as a text block rather than a one-line value.
+const note = computed(() => !!props.meta.multiline && props.meta.sensitive && !props.meta.mono)
 // Sensitive and multiline drafts are saved explicitly; plain values save on blur.
 const explicit = computed(() => props.meta.sensitive || props.meta.multiline)
 async function reveal() {
@@ -160,10 +162,14 @@ async function generated(value: string) {
           v-if="meta.multiline"
           ref="field"
           v-model="draft"
-          rows="4"
+          :rows="note ? 8 : 4"
           :aria-label="meta.label"
+          :placeholder="note ? 'Текст заметки' : undefined"
           class="min-w-0 flex-1 rounded-lg bg-transparent px-2.5 py-1.5 text-sm outline-none ring-1 ring-primary/60 ring-inset"
-          :class="meta.mono ? 'font-mono' : ''"
+          :class="[
+            meta.mono ? 'font-mono' : '',
+            note ? 'field-sizing-content min-h-40 px-3.5 py-3 leading-relaxed' : '',
+          ]"
           @keydown.esc.prevent="cancel"
           @keydown.meta.enter.prevent="save"
           @blur="publicBlur"
@@ -199,16 +205,28 @@ async function generated(value: string) {
           type="button"
           :aria-label="`Изменить ${meta.label}`"
           :title="explicit ? 'Нажмите, чтобы изменить' : undefined"
-          class="min-h-8 min-w-0 flex-1 cursor-text rounded-lg px-2.5 py-1.5 text-left text-sm break-all whitespace-pre-wrap transition-colors"
+          class="min-h-8 min-w-0 flex-1 cursor-text rounded-lg px-2.5 py-1.5 text-left text-sm whitespace-pre-wrap transition-colors"
           :class="[
-            empty ? 'text-muted-foreground' : meta.mono || meta.sensitive ? 'font-mono' : '',
+            note ? 'min-h-24 px-3.5 py-3 leading-relaxed break-words' : 'break-all',
+            empty ? 'text-muted-foreground' : meta.mono || (meta.sensitive && !note) ? 'font-mono' : '',
             meta.sensitive && !empty
               ? 'bg-secret-bg text-secret-fg hover:brightness-[.97]'
               : 'hover:bg-foreground/[.05]',
           ]"
           @click="edit"
         >
+          <!-- Hidden note: blurred lines of text instead of a row of dots. -->
           <span
+            v-if="note && !empty && revealed === null"
+            class="flex flex-col gap-2.5 py-1.5"
+            aria-label="Текст скрыт"
+          >
+            <span class="h-2 w-[94%] rounded-full bg-current opacity-20" />
+            <span class="h-2 w-[81%] rounded-full bg-current opacity-20" />
+            <span class="h-2 w-[57%] rounded-full bg-current opacity-20" />
+          </span>
+          <span
+            v-else
             :key="revealed ?? 'mask'"
             :class="
               meta.sensitive && revealed !== null ? 'anim-reveal' : meta.sensitive && !empty ? 'tracking-[.14em]' : ''

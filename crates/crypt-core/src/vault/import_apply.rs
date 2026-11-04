@@ -68,25 +68,39 @@ impl Vault {
         }
         result
     }
-    pub fn import_logins(
-        &mut self,
-        drafts: Vec<LoginDraft>,
-        folder_name: &str,
-    ) -> Result<LoginImportReport> {
-        let folder_name = folder_name.trim();
-        if folder_name.is_empty() {
-            return Err(crate::CryptError::Validation(
-                "Укажите папку импорта".into(),
-            ));
-        }
-        let folder = match self
-            .folders()
+    /// Earlier imports put secrets into a dated folder («Импорт из браузера · 31 окт»).
+    /// Secrets live in «Секреты», so such a folder holding only secrets is dissolved:
+    /// its secrets move to the root and the folder goes away. Returns how many were removed.
+    pub fn tidy_import_folders(&mut self) -> Result<usize> {
+        let folders = self.folders();
+        let mut removed = 0;
+        for f in folders
             .iter()
-            .find(|f| f.name == folder_name && f.parent.is_none())
+            .filter(|f| f.parent.is_none() && is_import_folder(&f.name))
         {
-            Some(f) => f.id,
-            None => self.create_folder(folder_name, None)?,
-        };
+            if folders.iter().any(|c| c.parent == Some(f.id)) {
+                continue;
+            }
+            let inside: Vec<(crate::RecordId, bool)> = self
+                .records
+                .iter()
+                .filter(|(_, r)| r.folder() == Some(f.id))
+                .map(|(id, r)| (*id, r.secret_kind().is_some()))
+                .collect();
+            // Empty or holding notes: the user may want it, leave it alone.
+            if inside.is_empty() || inside.iter().any(|(_, secret)| !secret) {
+                continue;
+            }
+            for (id, _) in inside {
+                self.set_folder(&id, None)?;
+            }
+            self.delete_folder(&f.id)?;
+            removed += 1;
+        }
+        Ok(removed)
+    }
+    /// Logins become secrets: they live in «Секреты», not in a folder.
+    pub fn import_logins(&mut self, drafts: Vec<LoginDraft>) -> Result<LoginImportReport> {
         let mut seen = self.login_keys();
         let mut result = LoginImportReport {
             imported: 0,
@@ -107,7 +121,6 @@ impl Vault {
                 NewRecord {
                     title: d.title,
                     secret_kind: Some(SecretKind::Login),
-                    folder: Some(folder),
                     ..Default::default()
                 },
                 "import",
@@ -130,10 +143,48 @@ impl Vault {
     }
 }
 
+fn is_import_folder(name: &str) -> bool {
+    name.starts_with("Импорт из браузера · ") || name.starts_with("Импорт 2FA · ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::super::import_csv::parse_browser_csv;
     use super::*;
+    #[test]
+    fn tidy_dissolves_only_secret_only_import_folders() {
+        let d = tempfile::tempdir().unwrap();
+        let mut v = Vault::create(d.path(), &crate::SeedPhrase::generate()).unwrap();
+        let secret = |v: &mut Vault, folder| {
+            v.create_record(NewRecord {
+                title: "s".into(),
+                secret_kind: Some(SecretKind::Login),
+                folder: Some(folder),
+                ..Default::default()
+            })
+            .unwrap()
+        };
+        let old = v.create_folder("Импорт из браузера · 31 окт", None).unwrap();
+        let s1 = secret(&mut v, old);
+        let mixed = v.create_folder("Импорт 2FA · 1 ноя", None).unwrap();
+        secret(&mut v, mixed);
+        v.create_record(NewRecord {
+            title: "note".into(),
+            folder: Some(mixed),
+            ..Default::default()
+        })
+        .unwrap();
+        let mine = v.create_folder("Пароли", None).unwrap();
+        secret(&mut v, mine);
+        v.create_folder("Импорт 2FA · 2 ноя", None).unwrap();
+
+        assert_eq!(v.tidy_import_folders().unwrap(), 1);
+        let names: Vec<_> = v.folders().into_iter().map(|f| f.name).collect();
+        assert!(!names.contains(&"Импорт из браузера · 31 окт".to_string()));
+        assert_eq!(names.len(), 3);
+        assert_eq!(v.record(&s1).unwrap().folder(), None);
+        assert_eq!(v.tidy_import_folders().unwrap(), 0);
+    }
     #[test]
     fn duplicates_inside_file_and_existing_but_changed_password_is_new() {
         let d = tempfile::tempdir().unwrap();
@@ -142,9 +193,9 @@ mod tests {
         let parsed = parse_browser_csv(bytes).unwrap();
         let p = v.preview_logins(&parsed.logins);
         assert_eq!((p.new, p.duplicates), (2, 1));
-        let r = v.import_logins(parsed.logins, "Browser").unwrap();
+        let r = v.import_logins(parsed.logins).unwrap();
         assert_eq!((r.imported, r.duplicates), (2, 1));
-        assert_eq!(v.folders().len(), 1);
+        assert!(v.folders().is_empty(), "secrets need no import folder");
         let p = v.preview_logins(&parse_browser_csv(bytes).unwrap().logins);
         assert_eq!((p.new, p.duplicates), (0, 3));
     }
@@ -230,17 +281,8 @@ impl Vault {
             })
             .collect()
     }
-    pub fn import_otp(
-        &mut self,
-        drafts: Vec<OtpDraft>,
-        folder_name: &str,
-    ) -> Result<OtpImportReport> {
-        let folder_name = folder_name.trim();
-        if folder_name.is_empty() {
-            return Err(crate::CryptError::Validation(
-                "Укажите папку импорта".into(),
-            ));
-        }
+    /// New 2FA entries are secrets too: no import folder.
+    pub fn import_otp(&mut self, drafts: Vec<OtpDraft>) -> Result<OtpImportReport> {
         // Resolve all targets against the same vault state that produced the preview.
         let targets = self.preview_otp(&drafts);
         let mut result = OtpImportReport {
@@ -250,7 +292,6 @@ impl Vault {
             missing_batches: vec![],
         };
         let mut used = HashSet::new();
-        let mut folder = None;
         for (d, target) in drafts.into_iter().zip(targets) {
             let uri = otp_uri(&d);
             if let OtpTarget::Attach { record, .. } = target.target {
@@ -260,21 +301,6 @@ impl Vault {
                     continue;
                 }
             }
-            let folder_id = match folder {
-                Some(id) => id,
-                None => {
-                    let id = match self
-                        .folders()
-                        .iter()
-                        .find(|f| f.name == folder_name && f.parent.is_none())
-                    {
-                        Some(f) => f.id,
-                        None => self.create_folder(folder_name, None)?,
-                    };
-                    folder = Some(id);
-                    id
-                }
-            };
             self.insert_built(
                 crate::RecordId::new(),
                 NewRecord {
@@ -284,7 +310,6 @@ impl Vault {
                         d.issuer.clone()
                     },
                     secret_kind: Some(SecretKind::Login),
-                    folder: Some(folder_id),
                     ..Default::default()
                 },
                 "import",

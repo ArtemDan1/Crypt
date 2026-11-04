@@ -1,5 +1,5 @@
 use crate::commands::lifecycle::{VaultStatus, lock, status};
-use crate::state::AppState;
+use crate::state::{AppState, FlushWaiter};
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
@@ -16,17 +16,24 @@ pub fn graceful_lock(st: &AppState, notify: impl FnOnce(), wait: &Receiver<()>, 
     lock(st);
 }
 
-/// All UI/system locks ask the main editor to save, then drop the shared key.
+/// All UI/system locks ask every app window to save, then drop the shared key.
 pub fn lock_with_flush(app: &AppHandle) -> VaultStatus {
     let st = app.state::<std::sync::Arc<AppState>>();
     let _serial = st.lock_requests.lock().unwrap_or_else(|e| e.into_inner());
     let (tx, rx) = mpsc::channel();
     let token = format!("{:032x}", rand::random::<u128>());
-    *st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner()) = Some((token.clone(), tx));
+    let windows = crate::windows::app_window_labels(app);
+    *st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner()) = Some(FlushWaiter {
+        token: token.clone(),
+        pending: windows.iter().cloned().collect(),
+        done: tx,
+    });
     graceful_lock(
         &st,
         || {
-            let _ = app.emit_to("main", "vault-will-lock", token);
+            for label in &windows {
+                let _ = app.emit_to(label.as_str(), "vault-will-lock", token.clone());
+            }
         },
         &rx,
         FLUSH_TIMEOUT,
@@ -44,17 +51,16 @@ pub fn lock_from_system(app: &AppHandle) {
     });
 }
 pub fn acknowledge_flush(st: &AppState, label: &str, token: &str) {
-    if label != "main" {
-        return;
-    }
     let mut waiter = st.flush_waiter.lock().unwrap_or_else(|e| e.into_inner());
-    if waiter
-        .as_ref()
-        .is_some_and(|(expected, _)| expected == token)
+    let Some(w) = waiter.as_mut().filter(|w| w.token == token) else {
+        return;
+    };
+    // Only windows asked to save can answer (never the tray).
+    w.pending.remove(label);
+    if w.pending.is_empty()
+        && let Some(w) = waiter.take()
     {
-        if let Some((_, tx)) = waiter.take() {
-            let _ = tx.send(());
-        }
+        let _ = w.done.send(());
     }
 }
 #[tauri::command]
@@ -159,13 +165,20 @@ mod acknowledgement_tests {
             Box::new(crate::unlock::authenticator::FakeAuthenticator::ok()),
         );
         let (tx, rx) = mpsc::channel();
-        *st.flush_waiter.lock().unwrap() = Some(("current".into(), tx));
+        *st.flush_waiter.lock().unwrap() = Some(FlushWaiter {
+            token: "current".into(),
+            pending: ["main".to_string(), "w-1".to_string()].into(),
+            done: tx,
+        });
         acknowledge_flush(&st, "tray", "current");
         assert!(matches!(rx.try_recv(), Err(mpsc::TryRecvError::Empty)));
         assert!(st.flush_waiter.lock().unwrap().is_some());
         acknowledge_flush(&st, "main", "old");
         assert!(matches!(rx.try_recv(), Err(mpsc::TryRecvError::Empty)));
         acknowledge_flush(&st, "main", "current");
+        // A second window still has unsaved edits.
+        assert!(matches!(rx.try_recv(), Err(mpsc::TryRecvError::Empty)));
+        acknowledge_flush(&st, "w-1", "current");
         rx.recv_timeout(Duration::from_secs(1)).unwrap();
     }
 }

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+// Select items need a non-empty value; null means «any type».
+const ANY_TYPE = '__any'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { GripVertical, KeyRound, Plus, Trash2, X } from '@lucide/vue'
@@ -120,6 +123,11 @@ function addField(k: FieldKindName) {
   freshField.value = id
   setTimeout(() => freshField.value === id && (freshField.value = null), 900)
   addOpen.value = false
+  save()
+}
+function setLinkType(f: FieldDef, v: unknown) {
+  if (f.kind.kind !== 'RecordLink') return
+  f.kind.value.target_type = v === ANY_TYPE ? null : String(v)
   save()
 }
 function removeField(f: FieldDef) {
@@ -282,15 +290,18 @@ async function addStarter() {
                 />
                 <span class="text-muted-foreground text-[13px]">{{ kindMeta(f.kind.kind).label }}</span>
                 <template v-if="f.kind.kind === 'RecordLink'">
-                  <select
-                    v-model="f.kind.value.target_type"
-                    class="bg-card h-7 rounded-md border px-1.5 text-xs"
-                    aria-label="Тип связанных записей"
-                    @change="save"
+                  <Select
+                    :model-value="f.kind.value.target_type ?? ANY_TYPE"
+                    @update:model-value="(v) => setLinkType(f, v)"
                   >
-                    <option :value="null">Любой тип</option>
-                    <option v-for="t in lib.types" :key="t.id" :value="t.id">{{ t.name }}</option>
-                  </select>
+                    <SelectTrigger size="sm" class="text-xs" aria-label="Тип связанных записей"
+                      ><SelectValue
+                    /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem :value="ANY_TYPE">Любой тип</SelectItem>
+                      <SelectItem v-for="t in lib.types" :key="t.id" :value="t.id">{{ t.name }}</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </template>
                 <label
                   v-if="f.kind.kind === 'RecordLink' || f.kind.kind === 'SecretLink'"

@@ -19,10 +19,13 @@ import { api } from '@/lib/api'
 import type { RecordSummary } from '@/lib/types'
 import { makeLink } from '@/lib/wikilinks'
 import { useLibrary } from '@/stores/library'
+import { useTabs } from '@/stores/tabs'
 
 const props = defineProps<{ record: Pick<RecordSummary, 'id' | 'title' | 'folder' | 'secret_kind'> }>()
 const lib = useLibrary()
 const router = useRouter()
+const tabs = useTabs()
+const openWindow = () => api.openWindow(`/r/${props.record.id}`).catch(() => toast.error('Не удалось открыть окно'))
 const renaming = ref(false)
 const draft = ref('')
 const folders = computed(() =>
@@ -66,6 +69,9 @@ async function trash() {
     <ContextMenuTrigger as-child><slot /></ContextMenuTrigger>
     <ContextMenuContent class="w-56">
       <ContextMenuItem @select="router.push(`/r/${record.id}`)">Открыть</ContextMenuItem>
+      <ContextMenuItem @select="tabs.open(`/r/${record.id}`)">Открыть в новой вкладке</ContextMenuItem>
+      <ContextMenuItem @select="openWindow">Открыть в новом окне</ContextMenuItem>
+      <ContextMenuSeparator />
       <ContextMenuItem @select="startRename">Переименовать</ContextMenuItem>
       <ContextMenuSub v-if="!record.secret_kind">
         <ContextMenuSubTrigger>Переместить в…</ContextMenuSubTrigger>
