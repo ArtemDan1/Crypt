@@ -103,8 +103,8 @@ Crypt раз в 12 часов (и по кнопке в «Настройки → 
 ```bash
 cd apps/desktop
 pnpm version:date          # версия = сегодняшняя дата
-pnpm tauri build           # Crypt.app и .dmg
-pnpm pkg                   # .pkg для обновления из приложения
+pnpm tauri build --bundles app,dmg   # Crypt.app и .dmg
+pnpm make-pkg                       # .pkg для обновления из приложения
 gh release create v$(node -p "require('./package.json').version") \
   ../../target/release/bundle/pkg/*.pkg ../../target/release/bundle/dmg/*.dmg
 ```

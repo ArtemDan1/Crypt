@@ -12,7 +12,7 @@
     "format": "prettier --write src",
     "format:check": "prettier --check src",
     "version:date": "node scripts/version-date.mjs",
-    "pkg": "scripts/make-pkg.sh"
+    "make-pkg": "scripts/make-pkg.sh"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",
