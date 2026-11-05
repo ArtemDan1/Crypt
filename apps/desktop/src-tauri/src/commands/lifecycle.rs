@@ -50,8 +50,10 @@ fn parse_words(words: &[String]) -> ApiResult<SeedPhrase> {
 }
 
 /// Put an opened vault into the state and report its status.
-pub fn install(st: &AppState, vault: Vault) -> VaultStatus {
+pub fn install(st: &AppState, mut vault: Vault) -> VaultStatus {
     let vault_id = vault.vault_id().to_string();
+    // One-time cleanup after imports stopped creating folders; never blocks unlocking.
+    let _ = vault.tidy_import_folders();
     *st.vault_guard() = Some(vault);
     crate::agent::cache::refresh(st);
     let result = VaultStatus::Unlocked { vault_id };
@@ -77,7 +79,9 @@ pub fn lock(st: &AppState) -> VaultStatus {
     st.agent.policy.clear_trust();
     {
         let mut guard = st.vault_guard();
-        if let Some(v) = guard.take() { v.lock(); }
+        if let Some(v) = guard.take() {
+            v.lock();
+        }
         st.recent.clear();
         crate::commands::transfer::cancel_pending(st);
     }
@@ -192,14 +196,20 @@ pub fn set_settings_with_effects(
 
 pub mod cmd {
     #[tauri::command]
-    pub fn show(app: tauri::AppHandle) { crate::tray::show(&app); }
+    pub fn show(app: tauri::AppHandle) {
+        crate::tray::show(&app);
+    }
     #[tauri::command]
     pub fn tray_hide(app: tauri::AppHandle) {
         use tauri::Manager;
-        if let Some(w) = app.get_webview_window("tray") { let _ = w.hide(); }
+        if let Some(w) = app.get_webview_window("tray") {
+            let _ = w.hide();
+        }
     }
     #[tauri::command]
-    pub fn app_quit(app: tauri::AppHandle) { app.exit(0); }
+    pub fn app_quit(app: tauri::AppHandle) {
+        app.exit(0);
+    }
 
     use super::*;
 
@@ -250,7 +260,9 @@ pub mod cmd {
     }
     #[tauri::command]
     pub async fn lock(app: tauri::AppHandle) -> ApiResult<VaultStatus> {
-        tauri::async_runtime::spawn_blocking(move || crate::autolock::lock_with_flush(&app)).await.map_err(|_|ApiError::new("Internal","Внутренняя ошибка"))
+        tauri::async_runtime::spawn_blocking(move || crate::autolock::lock_with_flush(&app))
+            .await
+            .map_err(|_| ApiError::new("Internal", "Внутренняя ошибка"))
     }
     #[tauri::command]
     pub fn vault_path(st: State<'_, std::sync::Arc<AppState>>) -> String {

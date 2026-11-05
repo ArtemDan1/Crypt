@@ -17,10 +17,13 @@ import RecordContextMenu from '@/components/RecordContextMenu.vue'
 import { api, CryptApiError } from '@/lib/api'
 import type { Folder, Id } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
+import { useTabs } from '@/stores/tabs'
 
 const props = defineProps<{ parent: Id | null; depth: number; activeId?: string; activeRecordId?: string }>()
 const lib = useLibrary()
 const router = useRouter()
+const tabs = useTabs()
+const openWindow = (id: Id) => api.openWindow(`/folder/${id}`).catch(() => toast.error('Не удалось открыть окно'))
 const children = computed(() =>
   lib.folders.filter((f) => f.parent === props.parent).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
 )
@@ -176,6 +179,9 @@ defineExpose({ startRename })
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent class="w-52">
+          <ContextMenuItem @select="tabs.open(`/folder/${f.id}`)">Открыть в новой вкладке</ContextMenuItem>
+          <ContextMenuItem @select="openWindow(f.id)">Открыть в новом окне</ContextMenuItem>
+          <ContextMenuSeparator />
           <ContextMenuItem @select="newRecord(f)">Новая запись</ContextMenuItem>
           <ContextMenuItem @select="addChild(f)">Новая подпапка</ContextMenuItem>
           <ContextMenuItem @select="startRename(f)">Переименовать</ContextMenuItem>

@@ -2,7 +2,6 @@
 import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import CryptMark from '@/components/crypt/CryptMark.vue'
-import AutolockRing from '@/components/crypt/AutolockRing.vue'
 import TotpCode from '@/components/secret/TotpCode.vue'
 import { api } from '@/lib/api'
 import type { RecordSummary, SecretOverview } from '@/lib/types'
@@ -14,7 +13,6 @@ const query = ref(''),
 const records = ref<RecordSummary[]>([]),
   recent = ref<string[]>([])
 const overviews = ref<Record<string, SecretOverview>>({})
-const agent = ref(false)
 let generation = 0,
   timer: ReturnType<typeof setTimeout> | undefined
 const unlisteners: UnlistenFn[] = []
@@ -46,17 +44,12 @@ async function refresh() {
   try {
     await session.refresh()
     if (session.status.state !== 'unlocked') return
-    const [items, ids, status] = await Promise.all([
-      api.listRecords({ secrets: true }),
-      api.recentSecrets(),
-      api.agentStatus(),
-    ])
+    const [items, ids] = await Promise.all([api.listRecords({ secrets: true }), api.recentSecrets()])
     const details = await Promise.all(items.map(async (r) => [r.id, await api.secretOverview(r.id)] as const))
     if (seq !== generation || session.status.state !== 'unlocked') return
     records.value = items
     recent.value = ids
     overviews.value = Object.fromEntries(details)
-    agent.value = status.running
   } catch (e) {
     if (seq === generation) error.value = String(e)
   }
@@ -160,14 +153,6 @@ onBeforeUnmount(() => {
           <TotpCode v-if="overviews[r.id]?.hasTotp" :record-id="r.id" compact />
         </div>
         <p v-if="!visible.length" class="py-4 text-sm text-muted-foreground">Секретов пока нет</p>
-      </div>
-      <div class="flex items-center gap-2 border-t px-4 py-2 text-xs text-muted-foreground">
-        <span>ssh-agent: {{ agent ? 'работает' : 'выключен' }}</span
-        ><span class="relative ml-auto flex size-7 items-center justify-center"
-          ><AutolockRing :left="session.autolockLeft" :total="session.autolockTotal" /><span class="text-[9px]"
-            >{{ Math.ceil((session.autolockLeft ?? 0) / 60000) }}м</span
-          ></span
-        >
       </div>
     </template>
     <div v-else class="flex flex-1 flex-col items-center justify-center gap-4 p-6">

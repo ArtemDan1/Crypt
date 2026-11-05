@@ -4,11 +4,13 @@ pub mod autolock;
 pub mod clipboard;
 pub mod commands;
 pub mod error;
+pub mod recent;
 pub mod ssh_config;
 pub mod state;
 pub mod tray;
-pub mod recent;
 pub mod unlock;
+pub mod updater;
+pub mod windows;
 
 use commands::library as lib_cmd;
 use commands::lifecycle::cmd as lifecycle;
@@ -50,9 +52,17 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                api.prevent_close();
-                tray::hide(window.app_handle());
+            let app = window.app_handle();
+            match event {
+                // The main window only hides: the vault keeps running in the tray.
+                tauri::WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
+                    api.prevent_close();
+                    tray::hide(app);
+                }
+                tauri::WindowEvent::Destroyed if windows::is_app_window(window.label()) => {
+                    tray::hide_if_no_windows(app, window.label());
+                }
+                _ => {}
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -101,6 +111,10 @@ pub fn run() {
             lifecycle::set_settings,
             lifecycle::vault_path,
             autolock::flush_done,
+            windows::open_window,
+            updater::check_update,
+            updater::download_update,
+            updater::install_update,
             unlock_cmd::unlock_methods,
             unlock_cmd::enable_biometric,
             unlock_cmd::disable_biometric,

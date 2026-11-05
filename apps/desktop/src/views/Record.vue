@@ -18,6 +18,8 @@ import FieldEditor from '@/components/record/FieldEditor.vue'
 import TagEditor from '@/components/record/TagEditor.vue'
 import RecordHistory from '@/components/record/RecordHistory.vue'
 import MarkdownEditor from '@/components/editor/MarkdownEditor.vue'
+import NavArrows from '@/components/NavArrows.vue'
+import RootCrumb from '@/components/RootCrumb.vue'
 import { api, CryptApiError } from '@/lib/api'
 import { debouncedSaver } from '@/lib/debounce'
 import { formatValue } from '@/lib/fields'
@@ -189,13 +191,29 @@ async function remove() {
   </div>
   <div v-else-if="rec" class="flex h-full flex-col">
     <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-3 border-b px-5">
+      <NavArrows />
       <nav aria-label="Путь" class="text-muted-foreground flex min-w-0 items-center gap-1.5 text-[13px]">
-        <RouterLink to="/" class="hover:text-foreground font-mono">/</RouterLink>
-        <template v-for="p in folderPath" :key="p.id">
-          <RouterLink :to="`/folder/${p.id}`" class="hover:text-foreground truncate">{{ p.name }}</RouterLink>
+        <template v-if="!rec.secret_kind">
+          <RootCrumb />
           <ChevronRight class="size-3.5 shrink-0" />
         </template>
-        <span class="text-foreground truncate">{{ title || 'Без названия' }}</span>
+        <template v-else>
+          <RouterLink
+            to="/secrets"
+            class="hover:text-foreground hover:bg-foreground/[.06] flex shrink-0 items-center gap-1.5 rounded-md px-1.5 py-1 transition-colors"
+            ><KeyRound class="text-secret size-3.5" />Секреты</RouterLink
+          >
+          <ChevronRight class="size-3.5 shrink-0" />
+        </template>
+        <template v-for="p in folderPath" :key="p.id">
+          <RouterLink
+            :to="`/folder/${p.id}`"
+            class="hover:text-foreground hover:bg-foreground/[.06] truncate rounded-md px-1.5 py-1 transition-colors"
+            >{{ p.name }}</RouterLink
+          >
+          <ChevronRight class="size-3.5 shrink-0" />
+        </template>
+        <span class="text-foreground truncate px-1.5 font-semibold">{{ title || 'Без названия' }}</span>
       </nav>
       <div class="flex-1" />
       <span v-if="saving" class="text-muted-foreground flex items-center gap-1.5 text-xs whitespace-nowrap">

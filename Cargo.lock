@@ -1005,7 +1005,7 @@ dependencies = [
 
 [[package]]
 name = "crypt-desktop"
-version = "1.0.0"
+version = "2026.11.4"
 dependencies = [
  "argon2",
  "block2",

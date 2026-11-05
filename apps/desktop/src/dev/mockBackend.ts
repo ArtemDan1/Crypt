@@ -772,6 +772,22 @@ const handlers: Record<string, (a: any) => unknown> = {
   },
   reveal_seed: () => [...WORDS],
   flush_done: () => {},
+  // Preview the update card: localStorage['crypt.dev.update'] = '1'.
+  check_update: () =>
+    localStorage.getItem('crypt.dev.update') === '1'
+      ? {
+          version: '2026.11.5',
+          pkgUrl: 'x',
+          releaseUrl: 'https://github.com/ArtemDan1/Crypt/releases',
+          size: 1,
+          notes: '',
+        }
+      : null,
+  download_update: () => {},
+  install_update: () => {},
+  open_window: ({ path }: { path: string }) => {
+    window.open(`${location.pathname}#${path}`, '_blank')
+  },
   vault_name: () => {
     need()
     return db.name?.trim() || 'Личное'

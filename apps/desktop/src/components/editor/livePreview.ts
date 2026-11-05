@@ -61,9 +61,11 @@ class LinkWidget extends WidgetType {
     a.className = this.broken ? 'cm-wikilink cm-wikilink-broken' : 'cm-wikilink'
     if (!this.broken) {
       a.setAttribute('href', `#/r/${this.id}`)
-      a.addEventListener('mousedown', (e) => {
+      a.addEventListener('mousedown', (ev) => {
+        const e = ev as MouseEvent
         e.preventDefault()
-        this.host.open(this.id)
+        // ⌘-click and middle click go through the global new-tab handler.
+        if (e.button === 0 && !e.metaKey) this.host.open(this.id)
       })
     } else a.title = 'Запись удалена'
     return a

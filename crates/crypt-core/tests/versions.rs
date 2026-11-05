@@ -206,7 +206,7 @@ fn snapshot_restore_removes_untouched_imported_secrets() {
         note: None,
         totp: None,
     };
-    v.import_logins(vec![draft("a.com"), draft("b.com")], "Импорт")
+    v.import_logins(vec![draft("a.com"), draft("b.com")])
         .unwrap();
     let manual = v
         .create_record(NewRecord {

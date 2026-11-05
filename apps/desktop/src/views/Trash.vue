@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavArrows from '@/components/NavArrows.vue'
 import { ref, watch } from 'vue'
 import { Eye, RotateCcw, TriangleAlert } from '@lucide/vue'
 import { toast } from 'vue-sonner'
@@ -64,7 +65,8 @@ async function run(fn: () => Promise<unknown>, msg: string) {
 
 <template>
   <div class="flex h-full flex-col">
-    <header data-tauri-drag-region class="flex h-16 shrink-0 items-center gap-3 pr-6 pl-9">
+    <header data-tauri-drag-region class="flex h-16 shrink-0 items-center gap-3 pr-6 pl-5">
+      <NavArrows />
       <h1 class="text-[22px] font-semibold tracking-[-.02em]">Корзина</h1>
       <span class="text-muted-foreground text-[13px]">{{ items.length || '' }}</span>
       <span class="flex-1" />

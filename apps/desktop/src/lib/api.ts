@@ -56,11 +56,10 @@ export async function call<T>(cmd: string, args?: Record<string, unknown>): Prom
 
 export const api = {
   previewBrowserCsv: (path: string) => call<import('./types').BrowserPreview>('preview_browser_csv', { path }),
-  importBrowserCsv: (path: string, folder: string) =>
-    call<Imported<import('./types').LoginImportReport>>('import_browser_csv', { path, folder }),
+  importBrowserCsv: (path: string) =>
+    call<Imported<import('./types').LoginImportReport>>('import_browser_csv', { path }),
   previewOtp: (source: import('./types').OtpSource) => call<import('./types').OtpPreview>('preview_otp', { source }),
-  importOtp: (token: string, folder: string) =>
-    call<Imported<import('./types').OtpImportReport>>('import_otp', { token, folder }),
+  importOtp: (token: string) => call<Imported<import('./types').OtpImportReport>>('import_otp', { token }),
   cancelOtpImport: () => call<void>('cancel_otp_import'),
   trashFile: (path: string) => call<void>('trash_file', { path }),
   inspectBackup: (path: string) => call<import('./types').BackupInspection>('inspect_backup', { path }),
@@ -164,4 +163,8 @@ export const api = {
   exportMarkdown: (path: string, includeSecrets: boolean) =>
     call<ExportReport>('export_markdown', { path, includeSecrets }),
   flushDone: (token: string) => call<void>('flush_done', { token }),
+  openWindow: (path: string) => call<void>('open_window', { path }),
+  checkUpdate: () => call<import('./types').UpdateInfo | null>('check_update'),
+  downloadUpdate: (url: string, size: number) => call<void>('download_update', { url, size }),
+  installUpdate: () => call<void>('install_update'),
 }

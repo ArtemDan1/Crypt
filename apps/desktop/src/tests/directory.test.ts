@@ -28,7 +28,7 @@ test('directory lists immediate children and records and provides ancestor links
   expect(root.text()).toContain('Недавние')
   expect(root.find('a[href="/folder/c"]').exists()).toBe(false)
   const nested = mount(Directory, { ...options, props: { folderId: 'b' } })
-  expect(nested.get('nav').text().replace(/\s+/g, '')).toBe('/РаботаПроекты')
+  expect(nested.get('nav').text().replace(/\s+/g, '')).toBe('ВсефайлыРаботаПроекты')
   expect(nested.text()).not.toContain('Недавние')
   expect(nested.find('a[href="/folder/c"]').exists()).toBe(true)
   expect(nested.text()).toContain('В проекте')

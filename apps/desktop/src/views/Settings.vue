@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavArrows from '@/components/NavArrows.vue'
 import { useRouter } from 'vue-router'
 import { useLibrary } from '@/stores/library'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -26,14 +27,16 @@ import TransferSection from '@/components/TransferSection.vue'
 import { api, CryptApiError } from '@/lib/api'
 import type { UnlockMethods, Settings as SettingsDTO, AgentStatus, SshConfigStatus } from '@/lib/types'
 import { useSession } from '@/stores/session'
+import UpdateSection from '@/components/update/UpdateSection.vue'
 
 const session = useSession()
 const route = useRoute()
-type Section = 'security' | 'ssh' | 'vault' | 'danger'
+type Section = 'security' | 'ssh' | 'vault' | 'updates' | 'danger'
 const SECTIONS: { id: Section; label: string }[] = [
   { id: 'security', label: 'Безопасность' },
   { id: 'ssh', label: 'Секреты и SSH' },
   { id: 'vault', label: 'Хранилище' },
+  { id: 'updates', label: 'Обновления' },
   { id: 'danger', label: 'Опасная зона' },
 ]
 const readSection = (): Section => {
@@ -248,6 +251,7 @@ async function copyExport() {
 <template>
   <div class="flex h-full">
     <nav aria-label="Разделы настроек" class="relative flex w-[220px] shrink-0 flex-col gap-0.5 px-3 py-8">
+      <div class="mb-2 ml-2.5"><NavArrows /></div>
       <h1 data-tauri-drag-region class="mb-3.5 ml-3 text-[22px] font-semibold tracking-[-.02em]">Настройки</h1>
       <div class="relative flex flex-col gap-0.5">
         <span
@@ -498,6 +502,7 @@ async function copyExport() {
           </div>
           <Button variant="outline" size="sm" @click="reveal">Показать в Finder</Button>
         </section>
+        <UpdateSection v-if="section === 'updates'" />
         <section v-if="section === 'danger'" class="border-destructive/30 rounded-[14px] border px-[18px] py-[18px]">
           <div class="font-medium">Удаление хранилища</div>
           <p class="text-muted-foreground mt-1 text-xs">

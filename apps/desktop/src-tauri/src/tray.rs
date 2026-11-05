@@ -14,7 +14,13 @@ pub fn hide(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.hide();
     }
-    let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    hide_if_no_windows(app, "main");
+}
+/// Back to a menu-bar-only app once no app window is left on screen.
+pub fn hide_if_no_windows(app: &AppHandle, closing: &str) {
+    if !crate::windows::other_window_visible(app, closing) {
+        let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+    }
 }
 
 pub fn refresh_tray(app: &AppHandle) {

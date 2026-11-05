@@ -41,7 +41,8 @@ vi.mock('@/lib/api', () => ({
 }))
 import Import from '@/views/Import.vue'
 import { CryptApiError } from '@/lib/api'
-const mountWizard = () => mount(Import, { global: { stubs: { SshImportDialog: true, LegacyImport: true } } })
+const mountWizard = () =>
+  mount(Import, { global: { stubs: { SshImportDialog: true, LegacyImport: true, NavArrows: true } } })
 const button = (w: ReturnType<typeof mountWizard>, text: string) =>
   w.findAll('button').find((b) => b.text().includes(text))!
 beforeEach(() => {
@@ -100,7 +101,7 @@ test('encrypted Aegis asks for its password and imports the preview token', asyn
   expect(w.find('input[type=password]').exists()).toBe(false)
   await button(w, 'Импортировать (1)').trigger('click')
   await flushPromises()
-  expect(mocks.importOtp).toHaveBeenCalledWith('opaque', expect.any(String))
+  expect(mocks.importOtp).toHaveBeenCalledWith('opaque')
   w.unmount()
 })
 test('locking while a preview is pending never repopulates the screen', async () => {

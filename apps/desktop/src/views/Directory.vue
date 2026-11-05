@@ -7,8 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import RecordList from '@/components/RecordList.vue'
 import RecordCard from '@/components/RecordCard.vue'
+import NavArrows from '@/components/NavArrows.vue'
+import RootCrumb from '@/components/RootCrumb.vue'
 import SegmentedControl from '@/components/crypt/SegmentedControl.vue'
 import { useViewPref } from '@/lib/viewPref'
+import { ROOT_TITLE } from '@/lib/pageInfo'
 import { api } from '@/lib/api'
 import { useLibrary } from '@/stores/library'
 
@@ -95,9 +98,10 @@ async function create() {
 
 <template>
   <div class="flex h-full flex-col">
-    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-3 border-b pr-5 pl-7">
+    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-3 border-b pr-5 pl-5">
+      <NavArrows />
       <nav aria-label="Путь к папке" class="text-muted-foreground flex min-w-0 flex-1 items-center gap-1.5 text-[13px]">
-        <RouterLink to="/" class="hover:text-foreground rounded-md px-1.5 py-1 font-mono">/</RouterLink>
+        <RootCrumb :current="!folderId" />
         <template v-for="f in crumbs" :key="f.id">
           <ChevronRight class="size-3 shrink-0" />
           <RouterLink
@@ -118,7 +122,7 @@ async function create() {
     <div v-if="missing" class="text-muted-foreground p-8">Папка не найдена</div>
     <div v-else :key="parent ?? 'root'" class="anim-in flex flex-1 flex-col gap-7 overflow-auto px-9 pt-7 pb-10">
       <div class="flex items-baseline gap-3">
-        <h1 class="text-[28px] font-semibold tracking-[-.025em]">{{ folder?.name ?? 'Файлы' }}</h1>
+        <h1 class="text-[28px] font-semibold tracking-[-.025em]">{{ folder?.name ?? ROOT_TITLE }}</h1>
         <span class="text-muted-foreground text-[13px]">{{ folder ? countIn(folder.id) : 'корень хранилища' }}</span>
       </div>
       <form v-if="naming" class="bg-card flex items-center gap-2 rounded-xl border p-3" @submit.prevent="createFolder">

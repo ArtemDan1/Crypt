@@ -111,7 +111,3 @@ export const IMPORT_SOURCES: ImportSource[] = [
     ],
   },
 ]
-export function defaultImportFolder(kind: 'browser' | 'otp', date: Date): string {
-  const month = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'][date.getMonth()]
-  return `${kind === 'browser' ? 'Импорт из браузера' : 'Импорт 2FA'} · ${date.getDate()} ${month}`
-}

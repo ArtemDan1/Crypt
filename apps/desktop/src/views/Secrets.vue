@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import NavArrows from '@/components/NavArrows.vue'
 import { computed, nextTick, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useElementSize, useEventListener } from '@vueuse/core'
@@ -171,8 +172,9 @@ async function deleteSelected() {
 </script>
 <template>
   <div class="relative flex h-full flex-col">
-    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-2 border-b pr-5 pl-7">
-      <h1 class="flex-1 text-[17px] font-semibold tracking-[-.01em]">Секреты</h1>
+    <header data-tauri-drag-region class="flex h-[52px] shrink-0 items-center gap-2 border-b pr-5 pl-5">
+      <NavArrows />
+      <h1 class="ml-1 flex-1 text-[17px] font-semibold tracking-[-.01em]">Секреты</h1>
       <Button variant="outline" size="sm" aria-label="Импорт" title="Импорт" @click="router.push('/import')"
         ><Download class="size-4" /> Импорт</Button
       >
