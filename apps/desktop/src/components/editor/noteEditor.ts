@@ -5,6 +5,7 @@ import { Plugin } from '@milkdown/kit/prose/state'
 import { $prose, replaceAll } from '@milkdown/kit/utils'
 import { cryptLinks, linkQuery, refreshLinkLabels, wikilinkNode, type NoteLinks } from './milkdownLinks'
 import { codeTheme } from './codeTheme'
+import { pointerBlockDrag, trackBlockPosition } from './blockDrag'
 
 export interface LinkQuery {
   query: string
@@ -64,6 +65,7 @@ export function createNoteEditor(options: NoteEditorOptions) {
         inputPlaceholder: 'Адрес ссылки',
       },
       [Crepe.Feature.BlockEdit]: {
+        blockHandle: { getPosition: trackBlockPosition },
         textGroup: {
           label: 'Текст',
           text: { label: 'Обычный текст' },
@@ -92,42 +94,45 @@ export function createNoteEditor(options: NoteEditorOptions) {
       },
     },
   })
-  crepe.editor.use(cryptLinks(options.links)).use(
-    $prose(
-      (ctx) =>
-        new Plugin({
-          props: {
-            attributes: { 'aria-label': 'Заметка', spellcheck: 'true', lang: 'ru' },
-            handleKeyDown: (_view, event) => options.onKeyDown?.(event) ?? false,
-            handleDOMEvents: {
-              click: (_view, event) => {
-                const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
-                if (!anchor || anchor.hasAttribute('data-crypt-link')) return false
-                event.preventDefault()
-                const href = anchor.getAttribute('href')!
-                if (/^(https?:|mailto:)/i.test(href)) options.openExternal?.(href)
-                return true
+  crepe.editor
+    .use(cryptLinks(options.links))
+    .use(pointerBlockDrag)
+    .use(
+      $prose(
+        (ctx) =>
+          new Plugin({
+            props: {
+              attributes: { 'aria-label': 'Заметка', spellcheck: 'true', lang: 'ru' },
+              handleKeyDown: (_view, event) => options.onKeyDown?.(event) ?? false,
+              handleDOMEvents: {
+                click: (_view, event) => {
+                  const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href]')
+                  if (!anchor || anchor.hasAttribute('data-crypt-link')) return false
+                  event.preventDefault()
+                  const href = anchor.getAttribute('href')!
+                  if (/^(https?:|mailto:)/i.test(href)) options.openExternal?.(href)
+                  return true
+                },
               },
             },
-          },
-          view: () => ({
-            update: (view, previous) => {
-              if (!ready || disposed || replacing) return
-              if (!previous.doc.eq(view.state.doc)) {
-                desired = ctx.get(serializerCtx)(view.state.doc)
-                options.onChange(desired)
-              }
-              if (!options.onQuery) return
-              const query = view.state.selection.empty ? linkQuery(view.state.doc, view.state.selection.from) : null
-              if (query) {
-                const rect = view.coordsAtPos(query.to)
-                options.onQuery({ ...query, left: rect.left, top: rect.bottom + 6 })
-              } else options.onQuery(null)
-            },
+            view: () => ({
+              update: (view, previous) => {
+                if (!ready || disposed || replacing) return
+                if (!previous.doc.eq(view.state.doc)) {
+                  desired = ctx.get(serializerCtx)(view.state.doc)
+                  options.onChange(desired)
+                }
+                if (!options.onQuery) return
+                const query = view.state.selection.empty ? linkQuery(view.state.doc, view.state.selection.from) : null
+                if (query) {
+                  const rect = view.coordsAtPos(query.to)
+                  options.onQuery({ ...query, left: rect.left, top: rect.bottom + 6 })
+                } else options.onQuery(null)
+              },
+            }),
           }),
-        }),
-    ),
-  )
+      ),
+    )
 
   function replace(markdown: string) {
     desired = markdown

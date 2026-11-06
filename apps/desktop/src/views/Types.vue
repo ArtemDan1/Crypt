@@ -2,8 +2,8 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 // Select items need a non-empty value; null means «any type».
 const ANY_TYPE = '__any'
-import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { GripVertical, KeyRound, Plus, Trash2, X } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { Button } from '@/components/ui/button'
@@ -19,6 +19,8 @@ import { toneForType } from '@/lib/tones'
 import { TYPE_ICONS, typeIcon } from '@/lib/icons'
 import type { FieldDef, FieldKind, FieldKindName, TypeDef } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
+import { useSession } from '@/stores/session'
+import { scrollWhileDragging, startPointerDrag } from '@/lib/pointerDrag'
 
 const props = defineProps<{ typeId?: string }>()
 const lib = useLibrary()
@@ -68,6 +70,9 @@ const selectedId = computed(() => props.typeId ?? lib.types[0]?.id)
 const recordCount = computed(() => (draft.value ? (lib.countByType.get(draft.value.id) ?? 0) : 0))
 const addOpen = ref(false)
 const dragFrom = ref<number | null>(null)
+const dragTo = ref<number | null>(null)
+const fieldList = ref<HTMLDivElement | null>(null)
+let stopDrag: (() => void) | undefined
 
 const saver = debouncedSaver(async (t: TypeDef) => {
   try {
@@ -83,6 +88,7 @@ function load() {
   draft.value = t ? clone(t) : null
 }
 watch(selectedId, async () => {
+  stopDrag?.()
   await saver.flush()
   load()
 })
@@ -160,13 +166,57 @@ function cycleColor(o: { color: string | null }) {
   o.color = colors[(colors.indexOf(o.color ?? 'zinc') + 1) % colors.length]!
   save()
 }
-function onDrop(to: number) {
-  if (!draft.value || dragFrom.value === null || dragFrom.value === to) return
-  const [moved] = draft.value.fields.splice(dragFrom.value, 1)
-  draft.value.fields.splice(to, 0, moved!)
-  dragFrom.value = null
+function moveField(from: number, slot: number) {
+  if (!draft.value || slot < 0 || slot > draft.value.fields.length || from === slot || from + 1 === slot) return
+  const [moved] = draft.value.fields.splice(from, 1)
+  draft.value.fields.splice(slot > from ? slot - 1 : slot, 0, moved!)
   save()
 }
+function startFieldDrag(event: PointerEvent, from: number) {
+  if (event.button !== 0 || event.isPrimary === false) return
+  stopDrag?.()
+  if (!draft.value || !fieldList.value) return
+  const fields = draft.value.fields.map((field) => field.id)
+  const typeId = draft.value.id
+  const slotAt = (y: number) => {
+    const rows = [...fieldList.value!.querySelectorAll<HTMLElement>('[data-field-id]')]
+    const index = rows.findIndex((row) => {
+      const rect = row.getBoundingClientRect()
+      return y < rect.top + rect.height / 2
+    })
+    return index < 0 ? rows.length : index
+  }
+  dragFrom.value = from
+  stopDrag = startPointerDrag(event, {
+    onMove: (next) => {
+      scrollWhileDragging(fieldList.value!, next.clientY)
+      dragTo.value = slotAt(next.clientY)
+    },
+    onDrop: (next) => {
+      if (
+        draft.value?.id !== typeId ||
+        draft.value.fields.some((field, i) => field.id !== fields[i]) ||
+        draft.value.fields.length !== fields.length
+      )
+        return
+      moveField(from, slotAt(next.clientY))
+    },
+    onEnd: () => {
+      dragFrom.value = null
+      dragTo.value = null
+    },
+  })
+}
+const unhookFlush = useSession().beforeLock(() => saver.flush())
+onBeforeRouteLeave(async () => {
+  stopDrag?.()
+  await saver.flush()
+})
+onBeforeUnmount(() => {
+  stopDrag?.()
+  unhookFlush()
+  void saver.flush()
+})
 async function deleteType() {
   if (!draft.value) return
   try {
@@ -259,24 +309,33 @@ async function addStarter() {
             <h3 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Поля</h3>
             <span class="text-muted-foreground text-xs">Перетащите, чтобы поменять порядок</span>
           </div>
-          <div class="flex flex-col gap-1.5">
+          <div ref="fieldList" class="flex flex-col gap-1.5">
             <div
               v-for="(f, i) in draft.fields"
               :key="f.id"
+              :data-field-id="f.id"
               class="group/f bg-card rounded-[11px] border transition-shadow hover:shadow-[0_6px_18px_-12px_rgba(0,0,0,.3)]"
               :class="[dragFrom === i && 'opacity-50', freshField === f.id && 'anim-fresh']"
-              @dragover.prevent
-              @drop="onDrop(i)"
+              :style="
+                dragTo === i
+                  ? { boxShadow: '0 -2px 0 var(--primary)' }
+                  : dragTo === draft.fields.length && i === draft.fields.length - 1
+                    ? { boxShadow: '0 2px 0 var(--primary)' }
+                    : undefined
+              "
             >
               <div class="flex min-h-12 items-center gap-2.5 pr-2.5 pl-1.5">
-                <span
-                  draggable="true"
-                  class="text-muted-foreground/60 hover:text-muted-foreground cursor-grab"
-                  aria-label="Перетащить"
-                  @dragstart="dragFrom = i"
+                <button
+                  type="button"
+                  class="text-muted-foreground/60 hover:text-muted-foreground cursor-grab touch-none p-1 active:cursor-grabbing"
+                  :aria-label="`Переместить поле ${f.name}`"
+                  title="Перетащите или нажмите Alt + ↑ / ↓"
+                  @pointerdown="startFieldDrag($event, i)"
+                  @keydown.alt.up.prevent="moveField(i, i - 1)"
+                  @keydown.alt.down.prevent="moveField(i, i + 2)"
                 >
                   <GripVertical class="size-4" />
-                </span>
+                </button>
                 <span
                   class="flex size-7 shrink-0 items-center justify-center rounded-[7px] font-mono text-xs font-medium"
                   :class="f.kind.kind === 'SecretLink' ? 'bg-secret-bg text-secret-fg' : 'bg-accent text-foreground-2'"

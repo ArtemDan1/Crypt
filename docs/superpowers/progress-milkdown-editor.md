@@ -6,6 +6,12 @@ Branch: feature/milkdown-editor, based on main (583d1c1).
 
 User requested a quieter, Obsidian-like appearance after reviewing the installed editor. Disabled Crepe's permanent top bar; retained its formatting-on-selection toolbar, slash commands and shortcuts. Replaced the large mode switch with compact controls, moved shortcut hints below the document, aligned content with the record title, and adjusted headings, paragraphs, quotes, code blocks and links to Crypt's theme. Document storage is unchanged. Verification: 99 frontend tests passed; real-browser rendering, source switching, immediate-save navigation, autocomplete and table reopening passed with no JavaScript errors. Screenshot inspected in both themes.
 
+## Internal drag handles
+
+User reported nonworking grippers in note blocks and type field rows. Both depended on HTML5 drag events, which Tauri's native file-drop handler intercepts on macOS (https://github.com/tauri-apps/tauri/issues/14373). Preserve that handler for Import and Restore; use pointer events for internal movement instead. Add movement thresholds, capture, Escape/blur/pointer-cancel cleanup, insertion indicators and scroll assistance. Note moves are one undoable ProseMirror transaction; field order flushes on route leave and vault lock. No native-window configuration or external file-drop behavior changed.
+
+Verification: 109 frontend tests pass. Real-browser mouse movements reorder paragraphs, code blocks, individual task-list items and type fields; undo, immediate navigation saving, reopening and Escape cancellation pass with no JavaScript errors. Independent review caught moving the parent list instead of the active item; fixed by retaining the provider's exact active position and reordering siblings at that depth. The regression test preserves item order, content and the checked state. No remaining Important/Critical review findings.
+
 - Baseline: 87 frontend tests passed.
 - Integrated Milkdown Crepe 7.23 with its top bar, slash menu, tasks, tables, embedded CodeMirror, math and image uploads stored as data URLs.
 - Kept a CodeMirror source mode and existing v-model/debounced record saving.

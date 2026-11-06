@@ -149,3 +149,18 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+.crypt-note-editor .milkdown .milkdown-block-handle .operation-item:last-child {
+  cursor: grab;
+  touch-action: none;
+}
+.crypt-note-editor .milkdown .crypt-block-dragging {
+  opacity: 0.45;
+}
+.crypt-block-drop-line {
+  position: fixed;
+  z-index: 100;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--primary);
+  pointer-events: none;
+}
