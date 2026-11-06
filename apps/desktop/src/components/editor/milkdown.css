@@ -1,0 +1,83 @@
+.crypt-note-editor .milkdown {
+  --crepe-color-background: transparent;
+  --crepe-color-on-background: var(--foreground);
+  --crepe-color-surface: var(--card);
+  --crepe-color-surface-low: var(--muted);
+  --crepe-color-on-surface: var(--foreground);
+  --crepe-color-on-surface-variant: var(--muted-foreground);
+  --crepe-color-outline: var(--border-strong);
+  --crepe-color-primary: var(--primary);
+  --crepe-color-secondary: var(--primary-soft);
+  --crepe-color-on-secondary: var(--primary-soft-fg);
+  --crepe-color-inverse: var(--foreground);
+  --crepe-color-on-inverse: var(--background);
+  --crepe-color-inline-code: var(--secret);
+  --crepe-color-error: var(--destructive);
+  --crepe-color-hover: var(--accent);
+  --crepe-color-selected: var(--primary-soft);
+  --crepe-color-inline-area: var(--muted);
+  --crepe-font-title: var(--font-sans);
+  --crepe-font-default: var(--font-sans);
+  --crepe-font-code: var(--font-mono);
+  --crepe-base-font-size: 15px;
+}
+.crypt-note-editor .milkdown .ProseMirror {
+  min-height: 300px;
+  padding: 20px 12px 120px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.crypt-note-editor .milkdown .milkdown-top-bar {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 2px 4px;
+}
+.crypt-note-editor .milkdown .milkdown-top-bar .top-bar-divider {
+  margin: 6px;
+}
+.crypt-note-editor .milkdown .milkdown-top-bar .top-bar-item svg {
+  color: var(--muted-foreground);
+  fill: var(--muted-foreground);
+}
+.crypt-note-editor .milkdown .ProseMirror h1,
+.crypt-note-editor .milkdown .ProseMirror h2,
+.crypt-note-editor .milkdown .ProseMirror h3 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.crypt-note-editor .milkdown .ProseMirror h1 {
+  font-size: 1.75em;
+}
+.crypt-note-editor .milkdown .ProseMirror h2 {
+  font-size: 1.4em;
+}
+.crypt-note-editor .milkdown .ProseMirror h3 {
+  font-size: 1.15em;
+}
+.crypt-note-editor .milkdown .milkdown-code-block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.crypt-note-editor .milkdown .milkdown-code-block .cm-editor {
+  font-size: 13px;
+}
+.crypt-note-editor .milkdown .milkdown-code-block .cm-scroller {
+  font-family: var(--font-mono);
+}
+.crypt-note-editor .milkdown .crypt-wikilink {
+  background: var(--primary-soft);
+  color: var(--primary-soft-fg);
+  border-radius: 5px;
+  padding: 1px 5px;
+  cursor: pointer;
+  text-decoration: none;
+}
+.crypt-note-editor .milkdown .crypt-wikilink-broken {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
+.crypt-note-editor .milkdown button:focus-visible,
+.crypt-link-menu button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}

@@ -1,4 +1,13 @@
 use crypt_core::index::{Index, links::parse_wikilinks};
+
+#[test]
+fn escaped_table_wikilinks_keep_backlink_targets() {
+    let target = "01J9ZK7Q3M4N5P6R7S8T9V0W1X";
+    let links = parse_wikilinks(&format!("| [[{target}\\|Таблица]] |"));
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0].target.to_string(), target);
+    assert_eq!(links[0].alias.as_deref(), Some("Таблица"));
+}
 use crypt_core::model::record::RecordDoc;
 use crypt_core::*;
 #[test]

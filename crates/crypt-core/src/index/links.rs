@@ -8,7 +8,7 @@ pub struct WikiLink {
 }
 pub fn parse_wikilinks(body: &str) -> Vec<WikiLink> {
     static RE: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r"\[\[([0-7][0-9A-HJKMNP-TV-Z]{25})(?:\|([^\]\n]*))?\]\]")
+        Regex::new(r"\[\[([0-7][0-9A-HJKMNP-TV-Z]{25})(?:\\?\|([^\]\n]*))?\]\]")
             .expect("constant regex")
     });
     RE.captures_iter(body)
