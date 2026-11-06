@@ -42,7 +42,7 @@ export function createNoteEditor(options: NoteEditorOptions) {
   const crepe = new Crepe({
     root: options.root,
     defaultValue: options.markdown,
-    features: { [Crepe.Feature.TopBar]: true },
+    features: { [Crepe.Feature.TopBar]: false },
     featureConfigs: {
       [Crepe.Feature.Placeholder]: { text: 'Пишите здесь. / — вставить блок, [[ — ссылка на запись' },
       [Crepe.Feature.CodeMirror]: {
@@ -50,12 +50,6 @@ export function createNoteEditor(options: NoteEditorOptions) {
         noResultText: 'Язык не найден',
         copyText: 'Копировать',
         previewToggleText: (hidden) => (hidden ? 'Редактировать' : 'Скрыть код'),
-      },
-      [Crepe.Feature.TopBar]: {
-        headingOptions: [
-          { label: 'Текст', level: null },
-          ...[1, 2, 3, 4, 5, 6].map((level) => ({ label: `Заголовок ${level}`, level })),
-        ],
       },
       [Crepe.Feature.ImageBlock]: {
         onUpload: imageData,

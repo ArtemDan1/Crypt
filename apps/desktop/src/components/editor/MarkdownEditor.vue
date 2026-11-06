@@ -157,29 +157,17 @@ defineExpose({ focus: () => (source.value ? sourceEditor.value?.focus() : editor
 
 <template>
   <section class="crypt-note-editor min-w-0" aria-label="Редактор заметки">
-    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-      <div class="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5" aria-label="Режим редактора">
-        <button
-          type="button"
-          class="rounded-md px-3 py-1.5 hover:text-foreground"
-          :class="!source && 'bg-background text-foreground shadow-sm'"
-          :aria-pressed="!source"
-          :disabled="failed"
-          @click="source = false"
-        >
-          Редактор
-        </button>
-        <button
-          type="button"
-          class="rounded-md px-3 py-1.5 hover:text-foreground"
-          :class="source && 'bg-background text-foreground shadow-sm'"
-          :aria-pressed="source"
-          @click="source = true"
-        >
-          Markdown
-        </button>
-      </div>
-      <span>{{ source ? '⌘F — поиск · Tab — отступ' : '/ — вставить блок · [[ — ссылка · ⌘B / ⌘I' }}</span>
+    <div class="crypt-editor-controls" aria-label="Режим редактора">
+      <button
+        type="button"
+        class="crypt-editor-mode"
+        :aria-pressed="!source"
+        :disabled="failed"
+        @click="source = false"
+      >
+        Редактор
+      </button>
+      <button type="button" class="crypt-editor-mode" :aria-pressed="source" @click="source = true">Markdown</button>
     </div>
     <p v-if="failed" class="mb-3 text-sm text-muted-foreground" role="status">
       Не удалось загрузить визуальный редактор. Заметка доступна в Markdown.
@@ -187,6 +175,9 @@ defineExpose({ focus: () => (source.value ? sourceEditor.value?.focus() : editor
     <p v-else-if="loading && !source" class="py-4 text-sm text-muted-foreground" role="status">Загрузка редактора…</p>
     <div v-show="!source" ref="host" class="crypt-note-visual min-h-[300px]" />
     <MarkdownSource v-if="source" ref="sourceEditor" v-model="model" :record-id="recordId" />
+    <div class="crypt-editor-hint" aria-hidden="true">
+      {{ source ? '⌘F — поиск · Tab — отступ' : '/ — вставить блок · [[ — ссылка · ⌘B — жирный · ⌘I — курсив' }}
+    </div>
     <div
       v-if="query"
       class="crypt-link-menu fixed z-50 max-h-72 w-72 overflow-auto rounded-xl border border-border bg-popover p-1 text-sm text-popover-foreground shadow-lg"

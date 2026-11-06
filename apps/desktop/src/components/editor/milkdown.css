@@ -5,7 +5,7 @@
   --crepe-color-surface-low: var(--muted);
   --crepe-color-on-surface: var(--foreground);
   --crepe-color-on-surface-variant: var(--muted-foreground);
-  --crepe-color-outline: var(--border-strong);
+  --crepe-color-outline: var(--muted-foreground);
   --crepe-color-primary: var(--primary);
   --crepe-color-secondary: var(--primary-soft);
   --crepe-color-on-secondary: var(--primary-soft-fg);
@@ -23,40 +23,109 @@
 }
 .crypt-note-editor .milkdown .ProseMirror {
   min-height: 300px;
-  padding: 20px 12px 120px;
+  padding: 0 0 64px;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
-.crypt-note-editor .milkdown .milkdown-top-bar {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 2px 4px;
+.crypt-editor-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 20px;
 }
-.crypt-note-editor .milkdown .milkdown-top-bar .top-bar-divider {
-  margin: 6px;
-}
-.crypt-note-editor .milkdown .milkdown-top-bar .top-bar-item svg {
+.crypt-editor-mode {
+  padding: 4px 8px;
+  border-radius: 5px;
   color: var(--muted-foreground);
-  fill: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 18px;
+  cursor: pointer;
+}
+.crypt-editor-mode:hover,
+.crypt-editor-mode[aria-pressed='true'] {
+  color: var(--foreground);
+  background: var(--muted);
+}
+.crypt-editor-mode:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.crypt-editor-hint {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.crypt-note-editor:focus-within .crypt-editor-hint {
+  opacity: 1;
 }
 .crypt-note-editor .milkdown .ProseMirror h1,
 .crypt-note-editor .milkdown .ProseMirror h2,
-.crypt-note-editor .milkdown .ProseMirror h3 {
+.crypt-note-editor .milkdown .ProseMirror h3,
+.crypt-note-editor .milkdown .ProseMirror h4,
+.crypt-note-editor .milkdown .ProseMirror h5,
+.crypt-note-editor .milkdown .ProseMirror h6 {
   font-weight: 600;
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  margin: 1.5em 0 0.5em;
 }
 .crypt-note-editor .milkdown .ProseMirror h1 {
-  font-size: 1.75em;
+  font-size: 1.65em;
 }
 .crypt-note-editor .milkdown .ProseMirror h2 {
-  font-size: 1.4em;
+  font-size: 1.35em;
 }
 .crypt-note-editor .milkdown .ProseMirror h3 {
   font-size: 1.15em;
 }
+.crypt-note-editor .milkdown .ProseMirror h4,
+.crypt-note-editor .milkdown .ProseMirror h5,
+.crypt-note-editor .milkdown .ProseMirror h6 {
+  font-size: 1em;
+}
+.crypt-note-editor .milkdown .ProseMirror > :first-child {
+  margin-top: 0;
+}
+.crypt-note-editor .milkdown .ProseMirror p {
+  padding: 0;
+  line-height: 1.7;
+}
+.crypt-note-editor .milkdown .ProseMirror > p {
+  margin: 0 0 0.85em;
+}
+.crypt-note-editor .milkdown .ProseMirror blockquote {
+  margin: 1em 0;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted-foreground);
+}
+.crypt-note-editor .milkdown .ProseMirror blockquote::before {
+  display: none;
+}
+.crypt-note-editor .milkdown .ProseMirror hr {
+  margin: 24px 0;
+  border-color: var(--border);
+}
+.crypt-note-editor .milkdown .ProseMirror code {
+  color: var(--foreground-2);
+  background: var(--muted);
+  padding: 1px 4px;
+  font-size: 0.88em;
+}
 .crypt-note-editor .milkdown .milkdown-code-block {
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 6px;
+  background: var(--muted);
+  margin: 16px 0;
+  padding: 8px 12px 12px;
+}
+.crypt-note-editor .milkdown .milkdown-code-block .cm-editor,
+.crypt-note-editor .milkdown .milkdown-code-block .cm-gutters {
+  background: var(--muted);
 }
 .crypt-note-editor .milkdown .milkdown-code-block .cm-editor {
   font-size: 13px;
@@ -65,12 +134,11 @@
   font-family: var(--font-mono);
 }
 .crypt-note-editor .milkdown .crypt-wikilink {
-  background: var(--primary-soft);
   color: var(--primary-soft-fg);
-  border-radius: 5px;
-  padding: 1px 5px;
   cursor: pointer;
-  text-decoration: none;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  text-underline-offset: 3px;
 }
 .crypt-note-editor .milkdown .crypt-wikilink-broken {
   color: var(--muted-foreground);

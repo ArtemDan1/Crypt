@@ -94,5 +94,5 @@ test('tables and language-aware code blocks are ready-made editable components',
   expect(root.querySelector('.milkdown-code-block')).not.toBeNull()
   expect(root.querySelector('.cm-editor')).not.toBeNull()
   expect(root.querySelector('table')).not.toBeNull()
-  expect(root.querySelector('.milkdown-top-bar')).not.toBeNull()
+  expect(root.querySelector('.milkdown-top-bar')).toBeNull()
 })

@@ -2,6 +2,10 @@
 
 Branch: feature/milkdown-editor, based on main (583d1c1).
 
+## Appearance revision
+
+User requested a quieter, Obsidian-like appearance after reviewing the installed editor. Disabled Crepe's permanent top bar; retained its formatting-on-selection toolbar, slash commands and shortcuts. Replaced the large mode switch with compact controls, moved shortcut hints below the document, aligned content with the record title, and adjusted headings, paragraphs, quotes, code blocks and links to Crypt's theme. Document storage is unchanged. Verification: 99 frontend tests passed; real-browser rendering, source switching, immediate-save navigation, autocomplete and table reopening passed with no JavaScript errors. Screenshot inspected in both themes.
+
 - Baseline: 87 frontend tests passed.
 - Integrated Milkdown Crepe 7.23 with its top bar, slash menu, tasks, tables, embedded CodeMirror, math and image uploads stored as data URLs.
 - Kept a CodeMirror source mode and existing v-model/debounced record saving.
