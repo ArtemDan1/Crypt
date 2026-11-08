@@ -20,7 +20,7 @@ import { TYPE_ICONS, typeIcon } from '@/lib/icons'
 import type { FieldDef, FieldKind, FieldKindName, TypeDef } from '@/lib/types'
 import { useLibrary } from '@/stores/library'
 import { useSession } from '@/stores/session'
-import { scrollWhileDragging, startPointerDrag } from '@/lib/pointerDrag'
+import { useSortable } from '@/lib/sortable'
 
 const props = defineProps<{ typeId?: string }>()
 const lib = useLibrary()
@@ -69,10 +69,7 @@ const draft = ref<TypeDef | null>(null)
 const selectedId = computed(() => props.typeId ?? lib.types[0]?.id)
 const recordCount = computed(() => (draft.value ? (lib.countByType.get(draft.value.id) ?? 0) : 0))
 const addOpen = ref(false)
-const dragFrom = ref<number | null>(null)
-const dragTo = ref<number | null>(null)
 const fieldList = ref<HTMLDivElement | null>(null)
-let stopDrag: (() => void) | undefined
 
 const saver = debouncedSaver(async (t: TypeDef) => {
   try {
@@ -88,7 +85,7 @@ function load() {
   draft.value = t ? clone(t) : null
 }
 watch(selectedId, async () => {
-  stopDrag?.()
+  sorter.cancel()
   await saver.flush()
   load()
 })
@@ -172,48 +169,33 @@ function moveField(from: number, slot: number) {
   draft.value.fields.splice(slot > from ? slot - 1 : slot, 0, moved!)
   save()
 }
+// Field ids captured when a drag starts; the drop is ignored if they changed.
+let dragSnapshot: { typeId: string; fields: string[] } | null = null
+const sameFields = () =>
+  !!dragSnapshot &&
+  draft.value?.id === dragSnapshot.typeId &&
+  draft.value.fields.length === dragSnapshot.fields.length &&
+  draft.value.fields.every((field, i) => field.id === dragSnapshot!.fields[i])
+const sorter = useSortable({
+  list: fieldList,
+  itemSelector: '[data-field-id]',
+  canDrop: sameFields,
+  onSort: (from, to) => {
+    if (sameFields()) moveField(from, to > from ? to + 1 : to)
+  },
+})
 function startFieldDrag(event: PointerEvent, from: number) {
-  if (event.button !== 0 || event.isPrimary === false) return
-  stopDrag?.()
-  if (!draft.value || !fieldList.value) return
-  const fields = draft.value.fields.map((field) => field.id)
-  const typeId = draft.value.id
-  const slotAt = (y: number) => {
-    const rows = [...fieldList.value!.querySelectorAll<HTMLElement>('[data-field-id]')]
-    const index = rows.findIndex((row) => {
-      const rect = row.getBoundingClientRect()
-      return y < rect.top + rect.height / 2
-    })
-    return index < 0 ? rows.length : index
-  }
-  dragFrom.value = from
-  stopDrag = startPointerDrag(event, {
-    onMove: (next) => {
-      scrollWhileDragging(fieldList.value!, next.clientY)
-      dragTo.value = slotAt(next.clientY)
-    },
-    onDrop: (next) => {
-      if (
-        draft.value?.id !== typeId ||
-        draft.value.fields.some((field, i) => field.id !== fields[i]) ||
-        draft.value.fields.length !== fields.length
-      )
-        return
-      moveField(from, slotAt(next.clientY))
-    },
-    onEnd: () => {
-      dragFrom.value = null
-      dragTo.value = null
-    },
-  })
+  if (!draft.value) return
+  dragSnapshot = { typeId: draft.value.id, fields: draft.value.fields.map((field) => field.id) }
+  sorter.start(event, from)
 }
 const unhookFlush = useSession().beforeLock(() => saver.flush())
 onBeforeRouteLeave(async () => {
-  stopDrag?.()
+  sorter.cancel()
   await saver.flush()
 })
 onBeforeUnmount(() => {
-  stopDrag?.()
+  sorter.cancel()
   unhookFlush()
   void saver.flush()
 })
@@ -307,34 +289,32 @@ async function addStarter() {
 
           <div class="mt-7 mb-2.5 flex items-center justify-between">
             <h3 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">Поля</h3>
-            <span class="text-muted-foreground text-xs">Перетащите, чтобы поменять порядок</span>
+            <span class="text-muted-foreground text-xs">Наведите на поле и потяните за ⠿ слева</span>
           </div>
           <div ref="fieldList" class="flex flex-col gap-1.5">
             <div
               v-for="(f, i) in draft.fields"
               :key="f.id"
               :data-field-id="f.id"
-              class="group/f bg-card rounded-[11px] border transition-shadow hover:shadow-[0_6px_18px_-12px_rgba(0,0,0,.3)]"
-              :class="[dragFrom === i && 'opacity-50', freshField === f.id && 'anim-fresh']"
-              :style="
-                dragTo === i
-                  ? { boxShadow: '0 -2px 0 var(--primary)' }
-                  : dragTo === draft.fields.length && i === draft.fields.length - 1
-                    ? { boxShadow: '0 2px 0 var(--primary)' }
-                    : undefined
-              "
+              class="group/f bg-card relative rounded-[11px] border"
+              :class="[
+                freshField === f.id && 'anim-fresh',
+                sorter.active.value === 'idle' && 'transition-shadow hover:shadow-[0_6px_18px_-12px_rgba(0,0,0,.3)]',
+              ]"
+              :style="sorter.styleFor(i)"
             >
-              <div class="flex min-h-12 items-center gap-2.5 pr-2.5 pl-1.5">
+              <div class="flex min-h-12 items-center gap-2.5 pr-2.5 pl-3">
                 <button
                   type="button"
-                  class="text-muted-foreground/60 hover:text-muted-foreground cursor-grab touch-none p-1 active:cursor-grabbing"
+                  class="text-muted-foreground/50 hover:text-foreground-2 absolute top-3 -left-7 flex h-6 w-7 cursor-grab touch-none items-center pr-2 pl-1 opacity-0 transition-opacity group-hover/f:opacity-100 focus-visible:opacity-100"
+                  :class="sorter.dragging.value === i && 'opacity-100'"
                   :aria-label="`Переместить поле ${f.name}`"
                   title="Перетащите или нажмите Alt + ↑ / ↓"
                   @pointerdown="startFieldDrag($event, i)"
                   @keydown.alt.up.prevent="moveField(i, i - 1)"
                   @keydown.alt.down.prevent="moveField(i, i + 2)"
                 >
-                  <GripVertical class="size-4" />
+                  <GripVertical class="size-3.5" />
                 </button>
                 <span
                   class="flex size-7 shrink-0 items-center justify-center rounded-[7px] font-mono text-xs font-medium"
@@ -378,7 +358,7 @@ async function addStarter() {
               </div>
               <div
                 v-if="f.kind.kind === 'Select' || f.kind.kind === 'MultiSelect'"
-                class="flex flex-wrap items-center gap-1.5 pb-3 pl-[66px]"
+                class="flex flex-wrap items-center gap-1.5 pb-3 pl-[50px]"
               >
                 <span
                   v-for="o in f.kind.value.options"

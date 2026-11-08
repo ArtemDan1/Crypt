@@ -20,6 +20,7 @@ export function startPointerDrag(event: PointerEvent, options: PointerDragOption
   const move = (next: PointerEvent) => {
     if (next.pointerId !== event.pointerId) return
     if (!moved && Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) < 5) return
+    if (!moved) document.documentElement.classList.add('crypt-grabbing')
     moved = true
     next.preventDefault()
     options.onMove?.(next)
@@ -27,6 +28,7 @@ export function startPointerDrag(event: PointerEvent, options: PointerDragOption
   const finish = (next?: PointerEvent) => {
     if (ended || (next && next.pointerId !== event.pointerId)) return
     ended = true
+    document.documentElement.classList.remove('crypt-grabbing')
     window.removeEventListener('pointermove', move, true)
     window.removeEventListener('pointerup', finish, true)
     window.removeEventListener('pointercancel', cancel, true)
