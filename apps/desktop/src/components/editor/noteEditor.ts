@@ -3,9 +3,15 @@ import { setCodeMirrorTheme } from '@milkdown/crepe/feature/code-mirror'
 import { editorViewCtx, serializerCtx } from '@milkdown/kit/core'
 import { Plugin } from '@milkdown/kit/prose/state'
 import { $prose, replaceAll } from '@milkdown/kit/utils'
+import { CodeMirrorBlock } from '@milkdown/kit/component/code-block'
 import { cryptLinks, linkQuery, refreshLinkLabels, wikilinkNode, type NoteLinks } from './milkdownLinks'
 import { codeTheme } from './codeTheme'
-import { pointerBlockDrag, trackBlockPosition } from './blockDrag'
+import { gripIcon, pointerBlockDrag, trackBlockPosition } from './blockDrag'
+
+// Milkdown destroys a code block's CodeMirror 5s after it scrolls away and
+// rebuilds it on return. Each rebuild forces a layout of the whole note and
+// stalls scrolling, so keep a built block for as long as the note is open.
+CodeMirrorBlock.TEARDOWN_DELAY = 2 ** 31 - 1
 
 export interface LinkQuery {
   query: string
@@ -65,7 +71,8 @@ export function createNoteEditor(options: NoteEditorOptions) {
         inputPlaceholder: 'Адрес ссылки',
       },
       [Crepe.Feature.BlockEdit]: {
-        blockHandle: { getPosition: trackBlockPosition },
+        handleDragIcon: gripIcon,
+        blockHandle: { getPosition: trackBlockPosition, getPlacement: () => 'left', getOffset: () => 8 },
         textGroup: {
           label: 'Текст',
           text: { label: 'Обычный текст' },

@@ -17,6 +17,7 @@ const lib = useLibrary()
 const router = useRouter()
 const host = ref<HTMLDivElement | null>(null)
 const sourceEditor = ref<InstanceType<typeof MarkdownSource> | null>(null)
+// Raw Markdown is only a fallback for when the visual editor fails to load.
 const source = ref(false)
 const loading = ref(true)
 const failed = ref(false)
@@ -157,18 +158,6 @@ defineExpose({ focus: () => (source.value ? sourceEditor.value?.focus() : editor
 
 <template>
   <section class="crypt-note-editor min-w-0" aria-label="Редактор заметки">
-    <div class="crypt-editor-controls" aria-label="Режим редактора">
-      <button
-        type="button"
-        class="crypt-editor-mode"
-        :aria-pressed="!source"
-        :disabled="failed"
-        @click="source = false"
-      >
-        Редактор
-      </button>
-      <button type="button" class="crypt-editor-mode" :aria-pressed="source" @click="source = true">Markdown</button>
-    </div>
     <p v-if="failed" class="mb-3 text-sm text-muted-foreground" role="status">
       Не удалось загрузить визуальный редактор. Заметка доступна в Markdown.
     </p>

@@ -15,6 +15,6 @@ const visible = computed(() => !!u.offer || ((u.progress !== null || u.installin
     leave-active-class="transition duration-200 ease-in"
     leave-to-class="translate-y-3 opacity-0"
   >
-    <div v-if="visible" class="fixed bottom-4 left-[264px] z-40"><UpdateCard /></div>
+    <div v-if="visible" class="fixed right-4 bottom-4 z-40"><UpdateCard /></div>
   </Transition>
 </template>
