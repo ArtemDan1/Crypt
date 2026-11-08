@@ -1,5 +1,5 @@
 // Same pattern as crypt-core's parse_wikilinks: [[<ULID>]] or [[<ULID>|alias]].
-export const WIKILINK_RE = /\[\[([0-7][0-9A-HJKMNP-TV-Z]{25})(?:\|([^\]\n]*))?\]\]/g
+export const WIKILINK_RE = /\[\[([0-7][0-9A-HJKMNP-TV-Z]{25})(?:\\?\|([^\]\n]*))?\]\]/g
 
 export interface FoundLink {
   from: number

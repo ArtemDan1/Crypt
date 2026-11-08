@@ -42,6 +42,41 @@ fn find(v: &Vault, title: &str) -> RecordView {
 }
 
 #[test]
+fn table_wikilinks_export_and_import_without_breaking_cells() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut v = Vault::create(dir.path(), &SeedPhrase::generate()).unwrap();
+    let new = |title: &str| NewRecord {
+        title: title.into(),
+        type_id: None,
+        folder: None,
+        secret_kind: None,
+    };
+    let target = v.create_record(new("Идея")).unwrap();
+    let note = v.create_record(new("Таблица")).unwrap();
+    v.set_body(
+        &note,
+        &format!("| Запись | Сосед |\n| --- | --- |\n| [[{target}\\|Подпись]] | Текст |"),
+    )
+    .unwrap();
+    let out = tempfile::tempdir().unwrap();
+    let report = v.export_markdown(out.path(), false).unwrap();
+    let text = fs::read_to_string(Path::new(&report.path).join("Таблица.md")).unwrap();
+    assert!(text.contains("[[Идея\\|Подпись]] | Текст"), "{text}");
+    let other = tempfile::tempdir().unwrap();
+    let mut restored = Vault::create(other.path(), &SeedPhrase::generate()).unwrap();
+    restored
+        .import_markdown_dir(Path::new(&report.path))
+        .unwrap();
+    let target2 = find(&restored, "Идея");
+    let note2 = find(&restored, "Таблица");
+    assert!(
+        note2
+            .body
+            .contains(&format!("[[{}\\|Подпись]] | Текст", target2.id))
+    );
+}
+
+#[test]
 fn obsidian_folder_becomes_folders_notes_fields_and_links() {
     let src = tempfile::tempdir().unwrap();
     let root = src.path().join("Мой Obsidian");

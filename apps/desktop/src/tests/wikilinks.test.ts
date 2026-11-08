@@ -17,6 +17,10 @@ test('makeLink sanitizes title', () => {
   expect(makeLink(A, 'a]|b')).toBe(`[[${A}|a  b]]`)
 })
 
+test('findLinks recognizes escaped alias separators inside Markdown tables', () => {
+  expect(findLinks(`| [[${A}\\|Таблица]] |`)[0]).toMatchObject({ id: A, alias: 'Таблица' })
+})
+
 test('linkLabel prefers the current title and flags missing targets', () => {
   const titleOf = (id: string) => (id === A ? 'Новое имя' : undefined)
   expect(linkLabel(A, 'Старое', titleOf)).toEqual({ text: 'Новое имя', broken: false })

@@ -353,3 +353,10 @@ html.tray-window,
 .tray-window #app {
   background: transparent !important;
 }
+
+/* Set while an item is being dragged by pointer. */
+html.crypt-grabbing,
+html.crypt-grabbing * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}

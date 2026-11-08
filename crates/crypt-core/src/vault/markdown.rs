@@ -34,10 +34,10 @@ const MAX_DEPTH: usize = 64;
 const SECRETS_DIR: &str = "Секреты";
 
 static OBSIDIAN_LINK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(!?)\[\[([^\[\]|\n]+?)(?:\|([^\]\n]*))?\]\]").expect("valid regex")
+    Regex::new(r"(!?)\[\[([^\[\]|\n]+?)(?:\\?\|([^\]\n]*))?\]\]").expect("valid regex")
 });
 static CRYPT_LINK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\[\[([0-7][0-9A-HJKMNP-TV-Z]{25})(?:\|([^\]\n]*))?\]\]").expect("valid regex")
+    Regex::new(r"\[\[([0-7][0-9A-HJKMNP-TV-Z]{25})(?:\\?\|([^\]\n]*))?\]\]").expect("valid regex")
 });
 static INLINE_TAG: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?:^|\s)#([\p{L}\p{N}_/-]*[\p{L}_/-][\p{L}\p{N}_/-]*)").expect("valid regex")
@@ -438,7 +438,11 @@ impl Vault {
                     Some(id) => {
                         links += 1;
                         let alias = c.get(3).map(|m| m.as_str()).unwrap_or(target);
-                        format!("[[{id}|{}]]", alias.replace(['|', ']', '\n'], " "))
+                        let separator = if whole.contains("\\|") { "\\|" } else { "|" };
+                        format!(
+                            "[[{id}{separator}{}]]",
+                            alias.replace(['|', ']', '\n'], " ")
+                        )
                     }
                     None => whole,
                 }
@@ -628,7 +632,14 @@ impl Vault {
             }
             let body = CRYPT_LINK.replace_all(&body, |c: &regex::Captures| {
                 match c[1].parse::<RecordId>() {
-                    Ok(id) => link_text(&id, c.get(2).map(|m| m.as_str())),
+                    Ok(id) => {
+                        let link = link_text(&id, c.get(2).map(|m| m.as_str()));
+                        if c[0].contains("\\|") {
+                            link.replace('|', "\\|")
+                        } else {
+                            link
+                        }
+                    }
                     Err(_) => c[0].to_string(),
                 }
             });

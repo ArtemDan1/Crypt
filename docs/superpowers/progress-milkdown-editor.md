@@ -1,0 +1,30 @@
+# Milkdown editor delivery
+
+Branch: feature/milkdown-editor, based on main (583d1c1).
+
+## Appearance revision
+
+User requested a quieter, Obsidian-like appearance after reviewing the installed editor. Disabled Crepe's permanent top bar; retained its formatting-on-selection toolbar, slash commands and shortcuts. Replaced the large mode switch with compact controls, moved shortcut hints below the document, aligned content with the record title, and adjusted headings, paragraphs, quotes, code blocks and links to Crypt's theme. Document storage is unchanged. Verification: 99 frontend tests passed; real-browser rendering, source switching, immediate-save navigation, autocomplete and table reopening passed with no JavaScript errors. Screenshot inspected in both themes.
+
+## Internal drag handles
+
+User reported nonworking grippers in note blocks and type field rows. Both depended on HTML5 drag events, which Tauri's native file-drop handler intercepts on macOS (https://github.com/tauri-apps/tauri/issues/14373). Preserve that handler for Import and Restore; use pointer events for internal movement instead. Add movement thresholds, capture, Escape/blur/pointer-cancel cleanup, insertion indicators and scroll assistance. Note moves are one undoable ProseMirror transaction; field order flushes on route leave and vault lock. No native-window configuration or external file-drop behavior changed.
+
+Verification: 109 frontend tests pass. Real-browser mouse movements reorder paragraphs, code blocks, individual task-list items and type fields; undo, immediate navigation saving, reopening and Escape cancellation pass with no JavaScript errors. Independent review caught moving the parent list instead of the active item; fixed by retaining the provider's exact active position and reordering siblings at that depth. The regression test preserves item order, content and the checked state. No remaining Important/Critical review findings.
+
+- Baseline: 87 frontend tests passed.
+- Integrated Milkdown Crepe 7.23 with its top bar, slash menu, tasks, tables, embedded CodeMirror, math and image uploads stored as data URLs.
+- Kept a CodeMirror source mode and existing v-model/debounced record saving.
+- Added real parser/serializer and Crepe lifecycle tests: latest frontend suite 99 passed.
+- Rust workspace: 169 passed, 1 fixture-generation test intentionally ignored. Initial sandbox run blocked the Unix socket test; rerunning outside the sandbox passed.
+- Production Tauri build succeeded for 2026.11.6. Ad-hoc bundle signing/verification used for local installation.
+- Independent review identified two Important wikilink issues. Fixed both with failing-then-passing tests: aliases in tables preserve neighbouring cells; Markdown punctuation in aliases remains literal. Added matching core backlink and export/import handling for escaped table separators.
+- Browser checks use synthetic in-memory records, never the user's real vault.
+
+Ruling: Keep source Markdown accessible for exact editing and unsupported Markdown constructs; visual editing uses Crepe's normal Markdown serializer. Opening notes and switching modes alone do not persist normalization.
+
+Final review: fresh reviewer. No remaining Important/Critical findings from that review.
+
+Deferred minor: on a rejected Crepe initialization, its partially constructed internal context is not explicitly destroyed; the component falls back to source Markdown. Upstream destroy waits for initialization to finish, so invoking it blindly after a rejection risks an unending retry timer. Source-mode switching and synchronization are checked in the real browser, rather than mocked Vue component tests.
+
+Delivery: installed and launched /Applications/Crypt.app 2026.11.6. Previous app preserved at target/app-backups/Crypt-previous-20261106-143531.app. Installed binary SHA256 matches build: f1614b03f8e8fd65fd2232bd581d7e3a65d6e5f7db0ad6ec335ebb57bd3f85e2. Signature verification passed. Final browser run passed rich rendering, no-save-on-open, source switching, immediate navigation saving, link autocomplete and table reopen checks with no JavaScript errors.

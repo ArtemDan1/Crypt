@@ -1,0 +1,243 @@
+.crypt-note-editor .milkdown {
+  --crepe-color-background: transparent;
+  --crepe-color-on-background: var(--foreground);
+  --crepe-color-surface: var(--card);
+  --crepe-color-surface-low: var(--muted);
+  --crepe-color-on-surface: var(--foreground);
+  --crepe-color-on-surface-variant: var(--muted-foreground);
+  --crepe-color-outline: var(--muted-foreground);
+  --crepe-color-primary: var(--primary);
+  --crepe-color-secondary: var(--primary-soft);
+  --crepe-color-on-secondary: var(--primary-soft-fg);
+  --crepe-color-inverse: var(--foreground);
+  --crepe-color-on-inverse: var(--background);
+  --crepe-color-inline-code: var(--secret);
+  --crepe-color-error: var(--destructive);
+  --crepe-color-hover: var(--accent);
+  --crepe-color-selected: var(--primary-soft);
+  --crepe-color-inline-area: var(--muted);
+  --crepe-font-title: var(--font-sans);
+  --crepe-font-default: var(--font-sans);
+  --crepe-font-code: var(--font-mono);
+  --crepe-base-font-size: 15px;
+}
+.crypt-note-editor .milkdown .ProseMirror {
+  min-height: 300px;
+  padding: 0 0 64px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.crypt-editor-hint {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.crypt-note-editor:focus-within .crypt-editor-hint {
+  opacity: 1;
+}
+.crypt-note-editor .milkdown .ProseMirror h1,
+.crypt-note-editor .milkdown .ProseMirror h2,
+.crypt-note-editor .milkdown .ProseMirror h3,
+.crypt-note-editor .milkdown .ProseMirror h4,
+.crypt-note-editor .milkdown .ProseMirror h5,
+.crypt-note-editor .milkdown .ProseMirror h6 {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  margin: 1.5em 0 0.5em;
+}
+.crypt-note-editor .milkdown .ProseMirror h1 {
+  font-size: 1.65em;
+}
+.crypt-note-editor .milkdown .ProseMirror h2 {
+  font-size: 1.35em;
+}
+.crypt-note-editor .milkdown .ProseMirror h3 {
+  font-size: 1.15em;
+}
+.crypt-note-editor .milkdown .ProseMirror h4,
+.crypt-note-editor .milkdown .ProseMirror h5,
+.crypt-note-editor .milkdown .ProseMirror h6 {
+  font-size: 1em;
+}
+.crypt-note-editor .milkdown .ProseMirror > :first-child {
+  margin-top: 0;
+}
+.crypt-note-editor .milkdown .ProseMirror p {
+  padding: 0;
+  line-height: 1.7;
+}
+.crypt-note-editor .milkdown .ProseMirror > p {
+  margin: 0 0 0.85em;
+}
+.crypt-note-editor .milkdown .ProseMirror blockquote {
+  margin: 1em 0;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted-foreground);
+}
+.crypt-note-editor .milkdown .ProseMirror blockquote::before {
+  display: none;
+}
+.crypt-note-editor .milkdown .ProseMirror hr {
+  margin: 24px 0;
+  border-color: var(--border);
+}
+.crypt-note-editor .milkdown .ProseMirror code {
+  color: var(--foreground-2);
+  background: var(--muted);
+  padding: 1px 4px;
+  font-size: 0.88em;
+}
+.crypt-note-editor .milkdown .milkdown-code-block {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--muted);
+  margin: 16px 0;
+  padding: 8px 12px 12px;
+}
+.crypt-note-editor .milkdown .milkdown-code-block .cm-editor,
+.crypt-note-editor .milkdown .milkdown-code-block .cm-gutters {
+  background: var(--muted);
+}
+.crypt-note-editor .milkdown .milkdown-code-block .cm-editor {
+  font-size: 13px;
+}
+.crypt-note-editor .milkdown .milkdown-code-block .cm-scroller {
+  font-family: var(--font-mono);
+}
+.crypt-note-editor .milkdown .crypt-wikilink {
+  color: var(--primary-soft-fg);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  text-underline-offset: 3px;
+}
+.crypt-note-editor .milkdown .crypt-wikilink-broken {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+}
+.crypt-note-editor .milkdown button:focus-visible,
+.crypt-link-menu button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.crypt-note-editor .milkdown .milkdown-block-handle {
+  transition: opacity 120ms ease;
+}
+/* Typing / does the same as the plus button, so only the grip is shown. */
+.crypt-note-editor .milkdown .milkdown-block-handle .operation-item:first-child {
+  display: none;
+}
+.crypt-note-editor .milkdown .milkdown-block-handle .operation-item:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border-radius: 5px;
+  cursor: grab;
+  touch-action: none;
+  opacity: 0.55;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease;
+}
+.crypt-note-editor .milkdown .milkdown-block-handle .operation-item:last-child:hover {
+  opacity: 1;
+  background: var(--accent);
+}
+.crypt-note-editor .milkdown .milkdown-block-handle .operation-item svg {
+  width: 10px;
+  height: 16px;
+  fill: var(--muted-foreground);
+}
+.crypt-note-editor .milkdown.crypt-block-drag-active .milkdown-block-handle,
+.crypt-block-drag-active .milkdown-block-handle {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+.crypt-note-editor .milkdown .crypt-block-dragging {
+  opacity: 0.3;
+  transition: opacity 120ms ease;
+}
+.crypt-block-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  max-height: 180px;
+  overflow: hidden;
+  padding: 6px 10px;
+  margin-left: 6px;
+  border-radius: 8px;
+  margin-top: 4px;
+  background: color-mix(in srgb, var(--card) 65%, transparent);
+  box-shadow:
+    0 14px 34px -14px rgba(0, 0, 0, 0.4),
+    0 0 0 1px var(--border-strong);
+  opacity: 0.8;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, #000 120px, transparent 180px);
+}
+.crypt-block-ghost .milkdown .ProseMirror {
+  min-height: 0;
+  padding: 0;
+}
+.crypt-block-ghost .milkdown .ProseMirror > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.crypt-block-drop-line {
+  position: fixed;
+  z-index: 101;
+  height: 2px;
+  margin-top: -1px;
+  border-radius: 1px;
+  background: var(--primary);
+  pointer-events: none;
+  transition:
+    top 90ms ease,
+    left 90ms ease,
+    opacity 90ms ease;
+}
+.crypt-block-drop-line::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -8px;
+  width: 8px;
+  height: 8px;
+  box-sizing: border-box;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  background: var(--background);
+}
+/* Dropping right next to the block would not move it. */
+.crypt-block-drop-line[data-idle='true'] {
+  opacity: 0.35;
+}
+/* Milkdown shows this plain copy until the code block scrolls into view and
+   swaps it for CodeMirror, and swaps back 5s after it leaves. Both must be the
+   same height, or the text below jumps on every swap. 30px is the tools row,
+   4px the CodeMirror content padding; the line height matches .cm-line. */
+.crypt-note-editor .milkdown .milkdown-code-block-placeholder {
+  margin: 0;
+  padding: 34px 0 4px;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: pre;
+}
+.crypt-note-editor .milkdown .milkdown-code-block-placeholder code {
+  display: block;
+  padding: 0 0 0 6px;
+  font-size: inherit;
+  line-height: inherit;
+  background: none;
+}
